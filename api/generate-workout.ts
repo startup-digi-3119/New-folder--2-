@@ -25,7 +25,7 @@ export default async function handler(
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: model || 'llama-3.1-sonar-small-128k-online',
+                model: model || 'llama-3.1-sonar-small-128k-chat',
                 messages: messages,
                 max_tokens: max_tokens || 1000,
                 temperature: temperature || 0.2

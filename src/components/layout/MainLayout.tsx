@@ -98,8 +98,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             setAmount('');
             setTitle('');
             window.location.reload();
-        } catch (err) {
+        } catch (err: any) {
             console.error('Error creating transaction:', err);
+            alert(`Failed to add transaction: ${err.message || 'Unknown error'}`);
         } finally {
             setLoading(false);
         }
@@ -255,7 +256,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             >
                 <div className="space-y-2 py-2">
                     {['Account Security', 'Notification Prefs', 'Theme & Appearance', 'Connected Devices'].map(item => (
-                        <button key={item} className="w-full p-4 flex items-center justify-between hover:bg-slate-50 rounded-2xl transition-colors group">
+                        <button
+                            key={item}
+                            onClick={() => alert(`${item} is coming soon in the next update!`)}
+                            className="w-full p-4 flex items-center justify-between hover:bg-slate-50 rounded-2xl transition-colors group"
+                        >
                             <span className="font-bold text-gray-700">{item}</span>
                             <span className="text-gray-300 group-hover:translate-x-1 transition-transform">→</span>
                         </button>
