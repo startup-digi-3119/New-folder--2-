@@ -136,7 +136,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         }
     };
 
-    const handleCreateNote = async (e: React.FormEvent) => {
+    const handleCreateNote = async () => {
         // ...Existing note logic (simulated for now as per previous version)
         console.log('Creating note:', { title, description });
         await new Promise(resolve => setTimeout(resolve, 500));
