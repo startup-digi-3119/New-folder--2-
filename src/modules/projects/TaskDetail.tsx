@@ -8,8 +8,7 @@ import {
     CheckSquare,
     ChevronRight,
     MoreVertical,
-    Calendar,
-    AlertCircle
+    Calendar
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
@@ -17,9 +16,10 @@ import Card from '../../components/ui/Card';
 interface TaskDetailProps {
     task: any;
     onClose: () => void;
+    onStatusUpdate: (newStatus: string) => void;
 }
 
-const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose }) => {
+const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onStatusUpdate }) => {
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center animate-in fade-in duration-300">
             <div
@@ -171,14 +171,18 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose }) => {
                 </div>
 
                 {/* Footer Actions */}
-                <footer className="sticky bottom-0 bg-white/80 backdrop-blur-xl border-t border-gray-100 p-6 flex justify-between gap-4">
-                    <Button variant="outline" className="flex-1">
-                        <AlertCircle size={18} className="mr-2" /> Report Issue
-                    </Button>
-                    <Button variant="primary" className="flex-1 shadow-xl shadow-primary/20">
-                        Update Status
-                    </Button>
-                </footer>
+                <div className="flex gap-2">
+                    {['Todo', 'InProgress', 'Done'].map((status) => (
+                        <Button
+                            key={status}
+                            variant={task.status === status ? "primary" : "outline"}
+                            className={`flex-1 ${task.status === status ? 'shadow-xl shadow-primary/20' : ''}`}
+                            onClick={() => onStatusUpdate(status)}
+                        >
+                            {status === 'InProgress' ? 'Doing' : status}
+                        </Button>
+                    ))}
+                </div>
             </div>
         </div>
     );

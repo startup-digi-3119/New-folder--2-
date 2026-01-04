@@ -15,6 +15,7 @@ import CalendarView from './modules/calendar/CalendarView';
 import NotesManagement from './modules/notes/NotesManagement';
 import Login from './modules/auth/Login';
 import Register from './modules/auth/Register';
+import ReportsDashboard from './modules/reports/ReportsDashboard';
 import { AuthProvider, useAuth } from './store/AuthContext';
 import { UIProvider } from './store/UIContext';
 
@@ -57,6 +58,7 @@ function App() {
                     <Route path="/finance/add" element={<AddTransaction />} />
                     <Route path="/calendar" element={<CalendarView />} />
                     <Route path="/notes" element={<NotesManagement />} />
+                    <Route path="/reports" element={<ReportsDashboard />} />
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                   </Routes>
                 </MainLayout>

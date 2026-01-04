@@ -5,12 +5,15 @@ import {
     Flame,
     Footprints,
     Moon,
-    CreditCard
+    CreditCard,
+    BarChart3
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 
 const Dashboard: React.FC = () => {
+    const navigate = useNavigate();
     const stats = [
         { label: 'Steps', value: '0', icon: <Footprints className="text-primary" />, trend: '0%', color: 'bg-primary/10' },
         { label: 'Calories', value: '0', icon: <Flame className="text-orange-500" />, trend: '0%', color: 'bg-orange-500/10' },
@@ -28,6 +31,14 @@ const Dashboard: React.FC = () => {
                     </h2>
                     <p className="text-gray-500 font-medium">Ready to start your day?</p>
                 </div>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="bg-primary/5 text-primary font-black uppercase tracking-widest text-[10px] rounded-xl px-4 h-10 border-2 border-primary/10"
+                    onClick={() => navigate('/reports')}
+                >
+                    <BarChart3 size={14} className="mr-2" /> Reports
+                </Button>
             </section>
 
             {/* Quick Stats Grid */}

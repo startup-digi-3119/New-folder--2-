@@ -31,7 +31,6 @@ const WorkoutSession: React.FC = () => {
 
     // Bluetooth State
     const [heartRate, setHeartRate] = useState(0);
-    const [isSyncing, setIsSyncing] = useState(false);
     const [btError, setBtError] = useState<string | null>(null);
 
     // Workout State
@@ -44,14 +43,13 @@ const WorkoutSession: React.FC = () => {
     // Final Form
     const [calories, setCalories] = useState('300'); // Default estimtate
     const [isSaving, setIsSaving] = useState(false);
+    const [showIntro, setShowIntro] = useState(true);
+    const [introIdx, setIntroIdx] = useState(0);
 
     useEffect(() => {
         if (!id) return;
         // Parse ID: e.g. "week-1-2-1" -> Phase "week-1-2", Day 1
         // We know the ID format is set in WorkoutPlanner as `${selectedPhase.id}-${day.day}`.
-        // But wait, the ID might contain hyphens.
-        // Let's split by hyphen. 
-        // Best approach: Iterate phases, check if ID starts with phase ID.
 
         let foundPhase = WORKOUT_PLAN.find(p => id.startsWith(p.id));
         if (foundPhase) {
@@ -99,7 +97,6 @@ const WorkoutSession: React.FC = () => {
         setBtError(null);
         if (!checkBluetoothSupport()) return;
 
-        setIsSyncing(true);
         try {
             console.log('Requesting Fire-Boltt/Standard Heart Rate device...');
             // We scan for the standard Heart Rate Service (0x180D) which Fire-Boltt supports
@@ -110,17 +107,12 @@ const WorkoutSession: React.FC = () => {
         } catch (error: any) {
             console.error('BT Sync Error:', error);
             setBtError(error.message || 'Failed to connect. Ensure your watch is awake.');
-        } finally {
-            setIsSyncing(false);
         }
     };
 
     const handleNext = () => {
         const currentEx = allExercises[currentExerciseIdx];
         if (currentEx) {
-            // Check if we finished all sets for this exercise
-            // For simplicity, we assume user clicks "Next" after completing the full exercise or a set.
-            // Let's implement set-based tracking.
             if (completedSets < currentEx.sets - 1) {
                 setCompletedSets(prev => prev + 1);
             } else {
@@ -146,7 +138,7 @@ const WorkoutSession: React.FC = () => {
                 name: currentDay?.title || `Workout Session`,
                 duration_seconds: seconds,
                 calories_burned: parseInt(calories),
-                average_hr: 0, // Manual entry doesn't have HR usually
+                average_hr: 0,
             });
 
             if (error) throw error;
@@ -163,6 +155,84 @@ const WorkoutSession: React.FC = () => {
         return (
             <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">
                 Loading Plan...
+            </div>
+        );
+    }
+
+    if (showIntro) {
+        return (
+            <div className="min-h-screen bg-slate-900 text-white flex flex-col p-6">
+                <header className="flex items-center justify-between mb-12">
+                    <button onClick={() => navigate('/fitness')} className="p-2 bg-white/10 rounded-xl">
+                        <X size={24} />
+                    </button>
+                    <div className="text-center">
+                        <h2 className="text-xs font-black uppercase tracking-widest text-emerald-400 italic">Pre-Workout Check</h2>
+                        <p className="text-sm font-bold text-gray-400">Review your plan</p>
+                    </div>
+                    <div className="w-10"></div>
+                </header>
+
+                <div className="flex-1 flex flex-col items-center justify-center space-y-8">
+                    <div className="w-full max-w-sm space-y-2">
+                        <div className="flex items-center justify-between px-2">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Exercise {introIdx + 1} of {allExercises.length}</span>
+                            <div className="flex gap-1">
+                                {allExercises.map((_, i) => (
+                                    <div key={i} className={`h-1 w-4 rounded-full ${i === introIdx ? 'bg-primary' : 'bg-white/10'}`} />
+                                ))}
+                            </div>
+                        </div>
+
+                        <Card className="bg-white/10 border-none p-8 text-center space-y-6">
+                            <div className="mx-auto w-20 h-20 bg-primary/20 rounded-3xl flex items-center justify-center text-primary">
+                                <Dumbbell size={40} />
+                            </div>
+                            <div>
+                                <h3 className="text-3xl font-black uppercase italic tracking-tighter">{allExercises[introIdx]?.name}</h3>
+                                <p className="text-gray-400 font-bold mt-1">{allExercises[introIdx]?.sets} Sets × {allExercises[introIdx]?.reps} Reps</p>
+                            </div>
+                            {allExercises[introIdx]?.notes && (
+                                <p className="text-blue-300 text-xs font-medium leading-relaxed bg-blue-500/10 p-4 rounded-2xl italic">
+                                    "{allExercises[introIdx].notes}"
+                                </p>
+                            )}
+                        </Card>
+                    </div>
+
+                    <div className="flex gap-4 w-full max-w-sm">
+                        <Button
+                            variant="ghost"
+                            className="bg-white/5 h-14 w-20 rounded-2xl"
+                            onClick={() => setIntroIdx(prev => Math.max(0, prev - 1))}
+                            disabled={introIdx === 0}
+                        >
+                            <ChevronRight size={20} className="rotate-180" />
+                        </Button>
+                        {introIdx < allExercises.length - 1 ? (
+                            <Button
+                                variant="secondary"
+                                fullWidth
+                                className="h-14 rounded-2xl font-black uppercase italic"
+                                onClick={() => setIntroIdx(prev => prev + 1)}
+                            >
+                                Next Exercise
+                            </Button>
+                        ) : (
+                            <Button
+                                variant="primary"
+                                fullWidth
+                                className="h-14 rounded-2xl font-black uppercase italic shadow-lg shadow-primary/20"
+                                onClick={() => {
+                                    setShowIntro(false);
+                                    setIsActive(true);
+                                }}
+                            >
+                                Start Workout
+                            </Button>
+                        )}
+                    </div>
+                </div>
             </div>
         );
     }
@@ -256,9 +326,7 @@ const WorkoutSession: React.FC = () => {
                             className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:bg-white/10 transition-colors"
                         >
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400">
-                                    <Activity size={18} />
-                                </div>
+                                <Activity size={18} className="text-blue-400" />
                                 <div className="text-left">
                                     <p className="text-xs font-black uppercase text-white/50 tracking-widest">Smart Watch</p>
                                     <p className="text-sm font-bold text-white">Connect Fire-Boltt</p>
@@ -333,7 +401,6 @@ const WorkoutSession: React.FC = () => {
                     className="h-16 rounded-2xl text-lg font-black italic uppercase tracking-wider shadow-xl shadow-primary/20"
                     onClick={handleNext}
                 >
-                    {/* Logic: if last set of last exercise -> Finish, else Next Set/Exercise */}
                     {completedSets >= (currentEx?.sets || 1) - 1
                         ? (currentExerciseIdx >= allExercises.length - 1 ? 'Finish Workout' : 'Next Exercise')
                         : 'Next Set'

@@ -10,7 +10,8 @@ import {
     Calendar,
     FileText,
     Wallet,
-    LogOut
+    LogOut,
+    BarChart3
 } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 
@@ -30,6 +31,7 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, onClose }) => {
         { icon: <Calendar size={20} />, label: 'Calendar', path: '/calendar' },
         { icon: <FileText size={20} />, label: 'Notes', path: '/notes' },
         { icon: <Wallet size={20} />, label: 'Financials', path: '/finance' },
+        { icon: <BarChart3 size={20} />, label: 'Reports', path: '/reports' },
     ];
 
     return (

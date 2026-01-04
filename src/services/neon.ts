@@ -34,6 +34,7 @@ export const db = pool;
 
 // Export a Supabase-like interface for easier migration
 export const neon = {
+    query,
     from: (table: string) => ({
         select: async (columns: string = '*') => {
             try {

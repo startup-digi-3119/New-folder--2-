@@ -20,31 +20,22 @@ const ProjectBoard: React.FC = () => {
     const [project, setProject] = useState<any>(null);
     const [tasks, setTasks] = useState<any[]>([]);
 
-    React.useEffect(() => {
+    const fetchData = async () => {
         if (!user || !id) return;
+        try {
+            // Fetch project details
+            const projResult = await neon.query('SELECT * FROM projects WHERE id = $1', [id]);
+            setProject(projResult.rows[0]);
 
-        const fetchData = async () => {
-            try {
-                // Fetch project details
-                const { data: projData } = await supabase
-                    .from('projects')
-                    .select('*')
-                    .eq('id', id)
-                    .single();
-                setProject(projData);
+            // Fetch tasks
+            const taskResult = await neon.query('SELECT * FROM tasks WHERE project_id = $1', [id]);
+            setTasks(taskResult.rows || []);
+        } catch (err) {
+            console.error('Error fetching board data:', err);
+        }
+    };
 
-                // Fetch tasks
-                const { data: taskData } = await supabase
-                    .from('tasks')
-                    .select('*')
-                    .eq('project_id', id);
-                setTasks(taskData || []);
-
-            } catch (err) {
-                console.error('Error fetching board data:', err);
-            }
-        };
-
+    React.useEffect(() => {
         fetchData();
     }, [user, id]);
 
@@ -54,30 +45,37 @@ const ProjectBoard: React.FC = () => {
         if (!title) return;
 
         try {
-            const { error } = await neon.from('tasks').insert({
-                user_id: user.id,
-                project_id: id,
-                title,
-                status,
-                priority: 'medium'
-            });
-            if (error) throw error;
-            // Reload tasks
-            const { data: taskData } = await supabase
-                .from('tasks')
-                .select('*')
-                .eq('project_id', id);
-            setTasks(taskData || []);
+            await neon.query(
+                'INSERT INTO tasks (user_id, project_id, title, status, priority) VALUES ($1, $2, $3, $4, $5)',
+                [user.id, id, title, status, 'medium']
+            );
+            fetchData();
         } catch (err) {
             console.error('Error adding task:', err);
             alert('Failed to add task');
         }
     };
 
+    const handleStatusUpdate = async (taskId: string, newStatus: string) => {
+        if (!user) return;
+        try {
+            await neon.query('UPDATE tasks SET status = $1 WHERE id = $2', [newStatus, taskId]);
+
+            // Update local state
+            setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+            if (selectedTask && selectedTask.id === taskId) {
+                setSelectedTask({ ...selectedTask, status: newStatus });
+            }
+        } catch (err) {
+            console.error('Error updating task status:', err);
+            alert('Failed to update status');
+        }
+    };
+
     const columns = [
-        { id: 'todo', title: 'To Do', tasks: tasks.filter(t => t.status === 'todo') },
-        { id: 'in_progress', title: 'In Progress', tasks: tasks.filter(t => t.status === 'in_progress') },
-        { id: 'done', title: 'Done', tasks: tasks.filter(t => t.status === 'done') },
+        { id: 'todo', title: 'To Do', tasks: tasks.filter(t => t.status.toLowerCase() === 'todo') },
+        { id: 'in_progress', title: 'In Progress', tasks: tasks.filter(t => t.status.toLowerCase() === 'inprogress' || t.status.toLowerCase() === 'in_progress') },
+        { id: 'done', title: 'Done', tasks: tasks.filter(t => t.status.toLowerCase() === 'done') },
     ];
 
     return (
@@ -145,7 +143,11 @@ const ProjectBoard: React.FC = () => {
             </div>
 
             {selectedTask && (
-                <TaskDetail task={selectedTask} onClose={() => setSelectedTask(null)} />
+                <TaskDetail
+                    task={selectedTask}
+                    onClose={() => setSelectedTask(null)}
+                    onStatusUpdate={(newStatus) => handleStatusUpdate(selectedTask.id, newStatus)}
+                />
             )}
         </div>
     );
