@@ -139,6 +139,8 @@ const WorkoutSession: React.FC = () => {
                 duration_seconds: seconds,
                 calories_burned: parseInt(calories),
                 average_hr: 0,
+                // Store local timestamp to ensure it appears in 'today' queries
+                created_at: new Date(Date.now() - (new Date().getTimezoneOffset() * 60000)).toISOString()
             });
 
             if (error) throw error;

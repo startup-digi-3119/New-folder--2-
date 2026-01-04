@@ -60,19 +60,25 @@ const Dashboard: React.FC = () => {
                 if (filterStr) healthQuery += ` AND date >= '${filterStr}'`;
 
                 // Parallel fetching for dashboard stats
+                // Optimize: Group transactions by type in SQL to avoid fetching all rows
                 const [workoutRes, healthRes, taskRes, transRes, pendingRes] = await Promise.all([
                     neon.query(calorieQuery, [user.id]),
                     neon.query(healthQuery, [user.id]),
                     neon.query('SELECT COUNT(*)::int as count FROM projects WHERE user_id = $1', [user.id]),
-                    neon.query('SELECT * FROM transactions WHERE user_id = $1', [user.id]),
+                    neon.query('SELECT type, SUM(amount) as total FROM transactions WHERE user_id = $1 GROUP BY type', [user.id]),
                     neon.query('SELECT * FROM tasks WHERE user_id = $1 AND status != $2 ORDER BY created_at DESC LIMIT 1', [user.id, 'done'])
                 ]);
 
                 const calories = workoutRes.rows[0]?.total || 0;
                 const hStats = healthRes.rows[0] || { steps: 0, sleep: 0, consumed: 0 };
-                const trans = transRes.rows;
-                const income = trans.filter((t: any) => t.type === 'income').reduce((acc: number, t: any) => acc + Number(t.amount), 0);
-                const expense = trans.filter((t: any) => t.type === 'expense').reduce((acc: number, t: any) => acc + Number(t.amount), 0);
+
+                // Process optimized transaction result
+                let income = 0;
+                let expense = 0;
+                transRes.rows.forEach((row: any) => {
+                    if (row.type === 'income') income = Number(row.total);
+                    if (row.type === 'expense') expense = Number(row.total);
+                });
 
                 setPendingTask(pendingRes.rows[0]);
 

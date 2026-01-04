@@ -11,14 +11,53 @@ import {
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
+import { neon } from '../../services/neon';
+import { useAuth } from '../../store/AuthContext';
 
 const FitnessDashboard: React.FC = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
+    const [stats, setStats] = React.useState({ calories: 0, steps: 0, time: 0 });
+
+    React.useEffect(() => {
+        if (!user) return;
+        const fetchData = async () => {
+            try {
+                // Get start of today in local time
+                const now = new Date();
+                const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+
+                // Fetch data in parallel
+                const [workouts, health] = await Promise.all([
+                    neon.query(`SELECT SUM(calories_burned) as calories, SUM(duration_seconds) as duration FROM workouts WHERE user_id = $1 AND created_at >= $2`, [user.id, startOfDay]),
+                    neon.query(`SELECT steps, active_minutes FROM health_stats WHERE user_id = $1 AND date = $2`, [user.id, startOfDay.split('T')[0]])
+                ]);
+
+                // Aggregate workouts
+                const workoutCals = workouts.rows[0]?.calories || 0;
+                const workoutTimeMins = Math.round((workouts.rows[0]?.duration || 0) / 60);
+
+                // Aggregate health stats
+                const dailySteps = health.rows[0]?.steps || 0;
+                // Total active minutes could be explicit entries + workout duration
+                const activeMins = (health.rows[0]?.active_minutes || 0) + workoutTimeMins;
+
+                setStats({
+                    calories: workoutCals,
+                    steps: dailySteps,
+                    time: activeMins
+                });
+            } catch (e) {
+                console.error('Failed to fetch fitness stats', e);
+            }
+        };
+        fetchData();
+    }, [user]);
 
     const dailyStats = [
-        { label: 'Energy', value: '0', unit: 'kcal', icon: <Flame size={18} />, color: 'text-orange-500', bg: 'bg-orange-50' },
-        { label: 'Steps', value: '0', unit: 'steps', icon: <Footprints size={18} />, color: 'text-primary', bg: 'bg-primary/10' },
-        { label: 'Time', value: '0', unit: 'min', icon: <Timer size={18} />, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+        { label: 'Energy', value: stats.calories.toLocaleString(), unit: 'kcal', icon: <Flame size={18} />, color: 'text-orange-500', bg: 'bg-orange-50' },
+        { label: 'Steps', value: stats.steps.toLocaleString(), unit: 'steps', icon: <Footprints size={18} />, color: 'text-primary', bg: 'bg-primary/10' },
+        { label: 'Time', value: stats.time.toLocaleString(), unit: 'min', icon: <Timer size={18} />, color: 'text-emerald-500', bg: 'bg-emerald-50' },
     ];
 
     return (
