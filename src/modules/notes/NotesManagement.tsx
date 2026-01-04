@@ -11,10 +11,36 @@ import Button from '../../components/ui/Button';
 
 // ... imports
 import { useUI } from '../../store/UIContext';
+import { useAuth } from '../../store/AuthContext';
+import { neon } from '../../services/neon';
 
 const NotesManagement: React.FC = () => {
     const { openModal } = useUI();
+    const { user } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
+    const [notes, setNotes] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    React.useEffect(() => {
+        if (!user) return;
+        const fetchNotes = async () => {
+            try {
+                const { data, error } = await neon.from('notes').select();
+                if (error) throw error;
+                setNotes(data || []);
+            } catch (err) {
+                console.error('Error fetching notes:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchNotes();
+    }, [user]);
+
+    const filteredNotes = notes.filter(n =>
+        n.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        n.content?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700 pb-24">
@@ -45,19 +71,41 @@ const NotesManagement: React.FC = () => {
                 </button>
             </div>
 
-            {/* Empty State */}
-            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-                <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center">
-                    <FileText size={40} className="text-gray-200" />
+            {/* Notes List */}
+            {loading ? (
+                <div className="flex justify-center p-12"><Activity className="animate-spin text-primary" size={32} /></div>
+            ) : filteredNotes.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+                    <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center">
+                        <FileText size={40} className="text-gray-200" />
+                    </div>
+                    <div className="space-y-1">
+                        <h3 className="text-xl font-bold text-gray-900">No notes found</h3>
+                        <p className="text-sm text-gray-400 max-w-[200px]">Start by creating your first memo or notebook.</p>
+                    </div>
+                    <Button variant="primary" className="mt-4 rounded-xl px-8 h-12 font-black italic uppercase tracking-widest" onClick={() => openModal('note')}>
+                        New Note
+                    </Button>
                 </div>
-                <div className="space-y-1">
-                    <h3 className="text-xl font-bold text-gray-900">No notes found</h3>
-                    <p className="text-sm text-gray-400 max-w-[200px]">Start by creating your first memo or notebook.</p>
+            ) : (
+                <div className="grid gap-4">
+                    {filteredNotes.map((note) => (
+                        <Card key={note.id} className="relative group hover:border-primary/20 transition-all">
+                            <div className="flex items-start justify-between">
+                                <div className="space-y-1">
+                                    <h4 className="font-bold text-gray-900">{note.title || 'Untitled Note'}</h4>
+                                    <p className="text-sm text-gray-500 line-clamp-2">{note.content}</p>
+                                </div>
+                            </div>
+                            <div className="mt-4 flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                    {new Date(note.created_at).toLocaleDateString()}
+                                </span>
+                            </div>
+                        </Card>
+                    ))}
                 </div>
-                <Button variant="primary" className="mt-4 rounded-xl px-8 h-12 font-black italic uppercase tracking-widest" onClick={() => openModal('note')}>
-                    New Note
-                </Button>
-            </div>
+            )}
 
             {/* Recent Categories */}
             <Card className="!p-6 bg-gradient-to-br from-slate-900 to-slate-800 border-none text-white relative overflow-hidden">

@@ -136,13 +136,28 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         }
     };
 
-    const handleCreateNote = async () => {
-        // ...Existing note logic (simulated for now as per previous version)
-        console.log('Creating note:', { title, description });
-        await new Promise(resolve => setTimeout(resolve, 500));
-        closeModal();
-        setTitle('');
-        setDescription('');
+    const handleCreateNote = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user) return;
+        setLoading(true);
+        try {
+            const { error } = await neon.from('notes').insert({
+                user_id: user.id,
+                title,
+                content: description,
+                favorite: false
+            });
+            if (error) throw error;
+            closeModal();
+            setTitle('');
+            setDescription('');
+            window.location.reload();
+        } catch (err: any) {
+            console.error('Error creating note:', err);
+            alert(`Failed to save note: ${err.message}`);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleCreatePost = async (e: React.FormEvent) => {
