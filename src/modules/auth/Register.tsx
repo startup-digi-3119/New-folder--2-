@@ -25,12 +25,7 @@ const Register: React.FC = () => {
         try {
             const { error } = await firebase.auth.signUp({
                 email,
-                password,
-                options: {
-                    data: {
-                        full_name: fullName,
-                    }
-                }
+                password
             });
 
             if (error) throw error;

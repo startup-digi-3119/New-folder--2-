@@ -24,22 +24,19 @@ const FinancialDashboard: React.FC = () => {
 
         const fetchTransactions = async () => {
             try {
-                const { data, error } = await supabase
-                    .from('transactions')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .order('date', { ascending: false });
-
-                if (error) throw error;
-                setTransactions(data || []);
+                const result = await neon.query('SELECT * FROM transactions WHERE user_id = $1', [user.id]);
+                const data = result.rows;
+                // Sort locally by date descending
+                const sortedData = (data || []).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                setTransactions(sortedData);
 
                 const income = (data || [])
-                    .filter(t => t.type === 'income')
-                    .reduce((acc, current) => acc + Number(current.amount), 0);
+                    .filter((t: any) => t.type === 'income')
+                    .reduce((acc: number, current: any) => acc + Number(current.amount), 0);
 
                 const expense = (data || [])
-                    .filter(t => t.type === 'expense')
-                    .reduce((acc, current) => acc + Number(current.amount), 0);
+                    .filter((t: any) => t.type === 'expense')
+                    .reduce((acc: number, current: any) => acc + Number(current.amount), 0);
 
                 setTotals({
                     income,

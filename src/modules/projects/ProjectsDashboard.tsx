@@ -27,22 +27,15 @@ const ProjectsDashboard: React.FC = () => {
 
         const fetchProjects = async () => {
             try {
-                const { data, error } = await supabase
-                    .from('projects')
-                    .select('*, tasks(count)')
-                    .eq('user_id', user.id);
-
-                if (error) throw error;
+                const projResult = await neon.query('SELECT * FROM projects WHERE user_id = $1', [user.id]);
+                const data = projResult.rows;
                 setProjects(data || []);
 
                 // Fetch total active tasks for stats
-                const { count } = await supabase
-                    .from('tasks')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('user_id', user.id)
-                    .neq('status', 'done');
-
-                setStats(prev => ({ ...prev, activeTasks: count || 0 }));
+                // Fetch total active tasks for stats
+                const tasksResult = await neon.query('SELECT * FROM tasks WHERE user_id = $1', [user.id]);
+                const activeCount = (tasksResult.rows || []).filter((t: any) => t.status !== 'done').length;
+                setStats(prev => ({ ...prev, activeTasks: activeCount }));
 
             } catch (err) {
                 console.error('Error fetching projects:', err);
