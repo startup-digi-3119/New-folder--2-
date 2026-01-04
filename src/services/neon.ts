@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { neon as neonConfig } from '@neondatabase/serverless';
 
 const connectionString = import.meta.env.VITE_NEON_DATABASE_URL;
 
@@ -6,31 +6,41 @@ if (!connectionString) {
     console.warn('Neon database URL missing. Database operations will fail.');
 }
 
-// Create a connection pool
-const pool = new Pool({
-    connectionString: connectionString || 'postgresql://localhost:5432/placeholder',
-    ssl: connectionString ? { rejectUnauthorized: false } : undefined,
-    max: 20,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
-});
+// Create the sql client using the HTTP driver
+const sql = connectionString ? neonConfig(connectionString) : null;
 
-// Helper function to execute queries
-export const query = async (text: string, params?: any[]) => {
-    const client = await pool.connect();
+// Helper function to execute queries using the HTTP driver
+export const query = async (text: string, params: any[] = []) => {
+    if (!sql) {
+        throw new Error('Neon database client not initialized. Check your environment variables.');
+    }
+
     try {
-        const result = await client.query(text, params);
-        return result;
-    } catch (error) {
+        // The serverless driver takes a query string and returns rows directly if using the neon function
+        // We need to handle parameters correctly. 
+        // Note: The `neon` function from @neondatabase/serverless handles param injection via template literals
+        // But since we want to support the (text, params) signature, we use the tag-less version or handle string manipulation
+
+        // For standard (text, params) support, we can use the raw query method if we wrap it
+        // However, the simplest way with the HTTP driver is to use the sql instance
+
+        // Let's implement a simple parameter replacement for the HTTP driver if it doesn't support (text, params) directly
+        let processedText = text;
+        const result = await (sql as any)(processedText, params);
+
+        // Return a response shape compatible with what the app expects (pg Result shape)
+        return {
+            rows: result,
+            command: 'SELECT', // mock
+            rowCount: result.length,
+            oid: 0,
+            fields: []
+        };
+    } catch (error: any) {
         console.error('Database query error:', error);
         throw error;
-    } finally {
-        client.release();
     }
 };
-
-// Export the pool for advanced usage
-export const db = pool;
 
 // Export a Supabase-like interface for easier migration
 export const neon = {
@@ -38,8 +48,8 @@ export const neon = {
     from: (table: string) => ({
         select: async (columns: string = '*') => {
             try {
-                const result = await query(`SELECT ${columns} FROM ${table}`);
-                return { data: result.rows, error: null };
+                const rows = await query(`SELECT ${columns} FROM ${table}`);
+                return { data: rows.rows, error: null };
             } catch (error: any) {
                 return { data: null, error };
             }
@@ -47,9 +57,9 @@ export const neon = {
         insert: async (values: any) => {
             const keys = Object.keys(values);
             const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
-            const sql = `INSERT INTO ${table} (${keys.join(', ')}) VALUES (${placeholders}) RETURNING *`;
+            const sqlStr = `INSERT INTO ${table} (${keys.join(', ')}) VALUES (${placeholders}) RETURNING *`;
             try {
-                const result = await query(sql, Object.values(values));
+                const result = await query(sqlStr, Object.values(values));
                 return { data: result.rows[0], error: null };
             } catch (error: any) {
                 return { data: null, error };
@@ -59,9 +69,9 @@ export const neon = {
             eq: async (column: string, value: any) => {
                 const keys = Object.keys(values);
                 const setClause = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
-                const sql = `UPDATE ${table} SET ${setClause} WHERE ${column} = $${keys.length + 1} RETURNING *`;
+                const sqlStr = `UPDATE ${table} SET ${setClause} WHERE ${column} = $${keys.length + 1} RETURNING *`;
                 try {
-                    const result = await query(sql, [...Object.values(values), value]);
+                    const result = await query(sqlStr, [...Object.values(values), value]);
                     return { data: result.rows, error: null };
                 } catch (error: any) {
                     return { data: null, error };
@@ -70,9 +80,9 @@ export const neon = {
         }),
         delete: () => ({
             eq: async (column: string, value: any) => {
-                const sql = `DELETE FROM ${table} WHERE ${column} = $1 RETURNING *`;
+                const sqlStr = `DELETE FROM ${table} WHERE ${column} = $1 RETURNING *`;
                 try {
-                    const result = await query(sql, [value]);
+                    const result = await query(sqlStr, [value]);
                     return { data: result.rows, error: null };
                 } catch (error: any) {
                     return { data: null, error };

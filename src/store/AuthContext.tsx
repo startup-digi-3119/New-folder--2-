@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { firebase } from '../services/firebase';
-import type { User } from '@supabase/supabase-js';
+// Define a generic user type for components that expect Supabase shape
+interface User {
+    id: string;
+    email?: string;
+    [key: string]: any;
+}
 
 interface AuthContextType {
     user: User | null;
@@ -17,13 +22,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         // Check for active session
         firebase.auth.getSession().then(({ data: { session } }: any) => {
-            setUser(session?.user ?? null);
+            if (session?.user) {
+                // Map uid to id for compatibility
+                (session.user as any).id = session.user.uid;
+                setUser(session.user);
+            } else {
+                setUser(null);
+            }
             setLoading(false);
         });
 
         // Listen for auth changes
         const { data: { subscription } } = firebase.auth.onAuthStateChange((_event: any, session: any) => {
-            setUser(session?.user ?? null);
+            if (session?.user) {
+                // Map uid to id for compatibility
+                (session.user as any).id = session.user.uid;
+                setUser(session.user);
+            } else {
+                setUser(null);
+            }
             setLoading(false);
         });
 
