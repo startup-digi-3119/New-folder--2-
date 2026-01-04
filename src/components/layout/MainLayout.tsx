@@ -131,6 +131,30 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         }
     };
 
+    const handleCreateNote = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user) return;
+        setLoading(true);
+        try {
+            // For now, we'll store notes in a 'notes' table if it existed, or just simulate it
+            // Since we don't know the schema for notes, we'll just log it and close modal
+            // In a real app, this would be: await supabase.from('notes').insert({ ... })
+            console.log('Creating note:', { title, description });
+
+            // Simulating a delay
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            closeModal();
+            setTitle('');
+            setDescription('');
+            // window.location.reload(); // No need to reload for a simulation
+        } catch (err) {
+            console.error('Error creating note:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-slate-50">
             <Header onMenuClick={() => setIsSidebarOpen(true)} />
@@ -386,6 +410,39 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     </div>
                     <Button fullWidth onClick={(e) => { e.preventDefault(); closeModal(); }}>
                         Post to Feed
+                    </Button>
+                </form>
+            </Modal>
+
+            <Modal
+                isOpen={activeModal === 'note'}
+                onClose={closeModal}
+                title="New Note"
+            >
+                <form onSubmit={handleCreateNote} className="space-y-4">
+                    <div className="space-y-1">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Title</label>
+                        <input
+                            type="text"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            placeholder="Note Title"
+                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold"
+                            required
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Content</label>
+                        <textarea
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder="Write something..."
+                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-medium h-48 resize-none"
+                            required
+                        />
+                    </div>
+                    <Button type="submit" fullWidth disabled={loading}>
+                        {loading ? 'Saving...' : 'Save Note'}
                     </Button>
                 </form>
             </Modal>

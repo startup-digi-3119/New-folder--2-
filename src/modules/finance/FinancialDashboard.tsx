@@ -69,7 +69,7 @@ const FinancialDashboard: React.FC = () => {
             </header>
 
             {/* Total Balance Card */}
-            <Card className="bg-slate-900 text-white border-none p-8 relative overflow-hidden">
+            <Card className="!bg-slate-900 text-white border-none p-8 relative overflow-hidden">
                 <div className="relative z-10 space-y-6">
                     <div className="flex items-center justify-between">
                         <div className="p-2 bg-white/10 rounded-xl">

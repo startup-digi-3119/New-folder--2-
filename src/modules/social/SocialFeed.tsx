@@ -75,7 +75,12 @@ const SocialFeed: React.FC = () => {
 
             {/* Main Feed */}
             <div className="space-y-6">
-                {posts.map(post => (
+                {posts.filter(post => {
+                    if (activeTab === 'Following') return true; // Show all for demo, or filter by 'user.followed' if we had that property
+                    if (activeTab === 'Explore') return true;
+                    if (activeTab === 'Challenges') return post.type === 'Challenge'; // Assuming we have a type for challenges or we can filter by content
+                    return true;
+                }).map(post => (
                     <Card key={post.id} className="!p-0 overflow-hidden group">
                         {/* Post Header */}
                         <div className="flex items-center justify-between p-4">

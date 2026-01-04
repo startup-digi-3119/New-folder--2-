@@ -9,7 +9,11 @@ import {
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 
+// ... imports
+import { useUI } from '../../store/UIContext';
+
 const NotesManagement: React.FC = () => {
+    const { openModal } = useUI();
     const [searchTerm, setSearchTerm] = useState('');
 
     return (
@@ -19,7 +23,7 @@ const NotesManagement: React.FC = () => {
                     <h2 className="text-3xl font-black text-gray-900 tracking-tighter italic">Notes</h2>
                     <p className="text-gray-500 font-medium tracking-tight">Capture your thoughts instantly.</p>
                 </div>
-                <Button variant="primary" size="sm" className="rounded-2xl px-6">
+                <Button variant="primary" size="sm" className="rounded-2xl px-6" onClick={() => openModal('note')}>
                     <Plus size={20} />
                 </Button>
             </header>
@@ -50,7 +54,7 @@ const NotesManagement: React.FC = () => {
                     <h3 className="text-xl font-bold text-gray-900">No notes found</h3>
                     <p className="text-sm text-gray-400 max-w-[200px]">Start by creating your first memo or notebook.</p>
                 </div>
-                <Button variant="primary" className="mt-4 rounded-xl px-8 h-12 font-black italic uppercase tracking-widest">
+                <Button variant="primary" className="mt-4 rounded-xl px-8 h-12 font-black italic uppercase tracking-widest" onClick={() => openModal('note')}>
                     New Note
                 </Button>
             </div>
