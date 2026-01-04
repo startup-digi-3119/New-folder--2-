@@ -6,7 +6,6 @@ import {
     Home,
     Activity,
     Briefcase,
-    Users,
     Calendar,
     FileText,
     Wallet,

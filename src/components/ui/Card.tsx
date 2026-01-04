@@ -5,7 +5,7 @@ interface CardProps {
     title?: string;
     subtitle?: string;
     className?: string;
-    onClick?: () => void;
+    onClick?: React.MouseEventHandler;
 }
 
 const Card: React.FC<CardProps> = ({ children, title, subtitle, className = '', onClick }) => {
