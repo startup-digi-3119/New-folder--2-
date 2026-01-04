@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Plus, CreditCard, Bell } from 'lucide-react';
 import Header from './Header';
 import BottomNav from './BottomNav';
 import MobileSidebar from './MobileSidebar';
@@ -336,22 +337,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 onClose={closeModal}
                 title="Notifications"
             >
-                <div className="space-y-4 py-4">
-                    <div className="p-4 bg-slate-50 rounded-2xl border border-gray-100 flex items-center gap-4">
-                        <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary font-black">AI</div>
-                        <div>
-                            <p className="text-sm font-bold text-gray-900">Workout Plan Ready!</p>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase">2 minutes ago</p>
-                        </div>
-                    </div>
-                    <div className="p-4 bg-slate-50 rounded-2xl border border-gray-100 flex items-center gap-4 opacity-50">
-                        <div className="w-10 h-10 bg-gray-200 rounded-xl flex items-center justify-center text-gray-500 font-black">S</div>
-                        <div>
-                            <p className="text-sm font-bold text-gray-900">System Update Complete</p>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase">1 hour ago</p>
-                        </div>
-                    </div>
-                    <Button variant="ghost" fullWidth onClick={closeModal} className="text-primary font-black uppercase italic tracking-widest text-xs">Mark all as read</Button>
+                <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
+                    <Bell size={48} className="text-gray-100" />
+                    <p className="text-sm font-bold text-gray-400 italic">No new notifications</p>
+                    <Button variant="ghost" fullWidth onClick={closeModal} className="text-primary font-black uppercase italic tracking-widest text-xs">Close</Button>
                 </div>
             </Modal>
 
@@ -392,11 +381,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     </div>
                     <div className="grid grid-cols-2 gap-3 pt-4">
                         <div className="p-4 bg-slate-50 rounded-3xl border border-gray-100">
-                            <p className="text-2xl font-black text-primary italic leading-none">12</p>
+                            <p className="text-2xl font-black text-primary italic leading-none">0</p>
                             <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1">Workouts</p>
                         </div>
                         <div className="p-4 bg-slate-50 rounded-3xl border border-gray-100">
-                            <p className="text-2xl font-black text-emerald-500 italic leading-none">5</p>
+                            <p className="text-2xl font-black text-emerald-500 italic leading-none">0</p>
                             <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1">Projects</p>
                         </div>
                     </div>

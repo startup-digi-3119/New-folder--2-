@@ -52,7 +52,7 @@ const Dashboard: React.FC = () => {
                 setPendingTask(pendingRes.rows[0]);
 
                 setRealStats({
-                    steps: '1,240', // Mock steps for now as we don't have a sensor
+                    steps: '0', // No sensor data yet
                     calories: calories.toString(),
                     tasks: activeTasks.toString(),
                     balance: `₹${(income - expense).toLocaleString()}`
