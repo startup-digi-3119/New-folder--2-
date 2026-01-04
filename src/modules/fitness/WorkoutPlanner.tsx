@@ -12,11 +12,32 @@ import Button from '../../components/ui/Button';
 import { WORKOUT_PLAN } from '../../data/workoutPlan';
 import type { WeeklyPlan } from '../../data/workoutPlan';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../store/AuthContext';
+import { neon } from '../../services/neon';
 
 const WorkoutPlanner: React.FC = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [selectedPhase, setSelectedPhase] = useState<WeeklyPlan>(WORKOUT_PLAN[0]);
     const [expandedDay, setExpandedDay] = useState<number | null>(null);
+    const [completedWorkoutTitles, setCompletedWorkoutTitles] = useState<string[]>([]);
+
+    React.useEffect(() => {
+        if (!user) return;
+        const fetchCompleted = async () => {
+            try {
+                const { data } = await neon.from('workouts').select('name');
+                if (data) {
+                    setCompletedWorkoutTitles(data.map((w: any) => w.name));
+                }
+            } catch (err) {
+                console.error('Error fetching completed workouts:', err);
+            }
+        };
+        fetchCompleted();
+    }, [user]);
+
+    const isCompleted = (title: string) => completedWorkoutTitles.includes(title);
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-24">
@@ -72,9 +93,10 @@ const WorkoutPlanner: React.FC = () => {
                             onClick={() => setExpandedDay(expandedDay === day.day ? null : day.day)}
                         >
                             <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg italic ${day.title.includes('Rest') ? 'bg-emerald-50 text-emerald-500' : 'bg-primary/10 text-primary'
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg italic ${isCompleted(day.title) ? 'bg-emerald-500 text-white' :
+                                        day.title.includes('Rest') ? 'bg-emerald-50 text-emerald-500' : 'bg-primary/10 text-primary'
                                     }`}>
-                                    {day.day}
+                                    {isCompleted(day.title) ? <CheckCircle2 size={24} /> : day.day}
                                 </div>
                                 <div>
                                     <h4 className="font-bold text-gray-900">{day.title}</h4>

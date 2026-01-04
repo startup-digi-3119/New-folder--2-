@@ -9,12 +9,39 @@ import {
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { useUI } from '../../store/UIContext';
+import { useAuth } from '../../store/AuthContext';
+import { neon } from '../../services/neon';
 
 const CalendarView: React.FC = () => {
     const { openModal } = useUI();
+    const { user } = useAuth();
     const [selectedDay, setSelectedDay] = useState(new Date().getDate());
+    const [events, setEvents] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
     const days = Array.from({ length: 31 }, (_, i) => i + 1);
     const weekDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+    React.useEffect(() => {
+        if (!user) return;
+        const fetchEvents = async () => {
+            setLoading(true);
+            try {
+                // Fetch tasks that have a due_date in January 2026
+                const dateStr = `2026-01-${selectedDay.toString().padStart(2, '0')}`;
+                const result = await neon.query(
+                    'SELECT * FROM tasks WHERE user_id = $1 AND due_date::date = $2',
+                    [user.id, dateStr]
+                );
+                setEvents(result.rows || []);
+            } catch (err) {
+                console.error('Error fetching events:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchEvents();
+    }, [user, selectedDay]);
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700 pb-24">
@@ -60,10 +87,28 @@ const CalendarView: React.FC = () => {
                     </Button>
                 </div>
 
-                <div className="flex flex-col items-center justify-center py-20 bg-white border-2 border-dashed border-gray-100 rounded-3xl text-center space-y-4">
-                    <Calendar size={48} className="text-gray-100" />
-                    <p className="text-sm font-bold text-gray-400">No events scheduled for this day.</p>
-                    <Button variant="ghost" className="text-primary font-bold" onClick={() => openModal('event')}>Quick Schedule</Button>
+                <div className="space-y-3">
+                    {loading ? (
+                        <div className="flex justify-center p-12"><Activity className="animate-spin text-primary" size={32} /></div>
+                    ) : events.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-20 bg-white border-2 border-dashed border-gray-100 rounded-3xl text-center space-y-4">
+                            <Calendar size={48} className="text-gray-100" />
+                            <p className="text-sm font-bold text-gray-400">No events scheduled for this day.</p>
+                            <Button variant="ghost" className="text-primary font-bold" onClick={() => openModal('event')}>Quick Schedule</Button>
+                        </div>
+                    ) : (
+                        events.map(event => (
+                            <Card key={event.id} className="flex items-center gap-4 !p-4 group">
+                                <div className="p-3 bg-primary/5 rounded-2xl text-primary font-black italic text-xs">
+                                    {event.due_date ? new Date(event.due_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="text-sm font-bold text-gray-900">{event.title}</h4>
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{event.description || 'No additional details'}</p>
+                                </div>
+                            </Card>
+                        ))
+                    )}
                 </div>
             </section>
 

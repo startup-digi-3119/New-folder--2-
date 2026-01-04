@@ -4,7 +4,8 @@ import {
     Search,
     Tag,
     FileText,
-    Activity
+    Activity,
+    Trash2
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -20,22 +21,49 @@ const NotesManagement: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [notes, setNotes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [editingNote, setEditingNote] = useState<any | null>(null);
+
+    const fetchNotes = async () => {
+        if (!user) return;
+        setLoading(true);
+        try {
+            const { data, error } = await neon.from('notes').select();
+            if (error) throw error;
+            setNotes(data || []);
+        } catch (err) {
+            console.error('Error fetching notes:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     React.useEffect(() => {
-        if (!user) return;
-        const fetchNotes = async () => {
-            try {
-                const { data, error } = await neon.from('notes').select();
-                if (error) throw error;
-                setNotes(data || []);
-            } catch (err) {
-                console.error('Error fetching notes:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchNotes();
     }, [user]);
+
+    const handleDeleteNote = async (id: number) => {
+        if (!window.confirm('Delete this note?')) return;
+        try {
+            await neon.from('notes').delete().match({ id });
+            setNotes(prev => prev.filter(n => n.id !== id));
+        } catch (err) {
+            console.error('Error deleting note:', err);
+        }
+    };
+
+    const handleUpdateNote = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await neon.from('notes').update({
+                title: editingNote.title,
+                content: editingNote.content
+            }).match({ id: editingNote.id });
+            setEditingNote(null);
+            fetchNotes();
+        } catch (err) {
+            console.error('Error updating note:', err);
+        }
+    };
 
     const filteredNotes = notes.filter(n =>
         n.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -90,12 +118,22 @@ const NotesManagement: React.FC = () => {
             ) : (
                 <div className="grid gap-4">
                     {filteredNotes.map((note) => (
-                        <Card key={note.id} className="relative group hover:border-primary/20 transition-all">
+                        <Card
+                            key={note.id}
+                            onClick={() => setEditingNote(note)}
+                            className="relative group hover:border-primary/20 transition-all cursor-pointer"
+                        >
                             <div className="flex items-start justify-between">
                                 <div className="space-y-1">
                                     <h4 className="font-bold text-gray-900">{note.title || 'Untitled Note'}</h4>
                                     <p className="text-sm text-gray-500 line-clamp-2">{note.content}</p>
                                 </div>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteNote(note.id); }}
+                                    className="p-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
                             </div>
                             <div className="mt-4 flex items-center justify-between">
                                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
@@ -104,6 +142,40 @@ const NotesManagement: React.FC = () => {
                             </div>
                         </Card>
                     ))}
+                </div>
+            )}
+
+            {/* Note Editor Modal */}
+            {editingNote && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
+                    <Card className="w-full max-w-lg scale-in flex flex-col gap-4 !p-6 shadow-2xl">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-black italic tracking-tighter text-gray-900 uppercase">Edit Note</h3>
+                            <button onClick={() => setEditingNote(null)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">✕</button>
+                        </div>
+                        <form onSubmit={handleUpdateNote} className="space-y-4">
+                            <div className="space-y-1">
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Title</label>
+                                <input
+                                    type="text"
+                                    value={editingNote.title}
+                                    onChange={(e) => setEditingNote({ ...editingNote, title: e.target.value })}
+                                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold text-gray-900"
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Content</label>
+                                <textarea
+                                    value={editingNote.content}
+                                    onChange={(e) => setEditingNote({ ...editingNote, content: e.target.value })}
+                                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-medium h-64 resize-none"
+                                    required
+                                />
+                            </div>
+                            <Button type="submit" fullWidth>Save Changes</Button>
+                        </form>
+                    </Card>
                 </div>
             )}
 

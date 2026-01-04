@@ -4,7 +4,8 @@ import {
     Activity,
     TrendingUp,
     Layout,
-    Clock
+    Clock,
+    Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
@@ -21,6 +22,18 @@ const ProjectsDashboard: React.FC = () => {
     const [projects, setProjects] = React.useState<any[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [stats, setStats] = React.useState({ activeTasks: 0, velocity: 0 });
+
+    const handleDeleteProject = async (e: React.MouseEvent, id: number) => {
+        e.stopPropagation();
+        if (!window.confirm('Are you sure you want to delete this project? All tasks will be lost.')) return;
+        try {
+            await neon.query('DELETE FROM projects WHERE id = $1', [id]);
+            setProjects(prev => prev.filter(p => p.id !== id));
+        } catch (err) {
+            console.error('Error deleting project:', err);
+            alert('Failed to delete project');
+        }
+    };
 
     React.useEffect(() => {
         if (!user) return;
@@ -102,12 +115,22 @@ const ProjectsDashboard: React.FC = () => {
                         {projects.map(project => (
                             <Card key={project.id} onClick={() => navigate(`/projects/${project.id}`)} className="cursor-pointer group hover:border-primary/30 transition-all">
                                 <div className="flex items-start justify-between">
-                                    <h4 className="font-bold text-gray-900 group-hover:text-primary">{project.title}</h4>
-                                    <span className="text-[10px] font-black uppercase text-primary bg-primary/5 px-2 py-0.5 rounded-full">
-                                        {project.tasks?.[0]?.count || 0} Tasks
-                                    </span>
+                                    <div className="flex-1">
+                                        <h4 className="font-bold text-gray-900 group-hover:text-primary">{project.title}</h4>
+                                        <p className="text-xs text-gray-500 mt-1 line-clamp-1">{project.description || 'No description provided.'}</p>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-2">
+                                        <button
+                                            onClick={(e) => handleDeleteProject(e, project.id)}
+                                            className="p-1 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded-lg transition-colors"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                        <span className="text-[10px] font-black uppercase text-primary bg-primary/5 px-2 py-0.5 rounded-full">
+                                            Active
+                                        </span>
+                                    </div>
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1 line-clamp-1">{project.description || 'No description provided.'}</p>
                             </Card>
                         ))}
                     </div>

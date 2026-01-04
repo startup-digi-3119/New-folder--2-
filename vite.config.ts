@@ -14,12 +14,16 @@ export default defineConfig({
         name: 'MyPlan',
         short_name: 'MyPlan',
         description: 'Comprehensive personal productivity and health platform',
+        display: 'standalone',
+        start_url: '/',
+        background_color: '#F8FAFC',
         theme_color: '#1E40AF',
         icons: [
           {
             src: 'logo.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           },
           {
             src: 'logo.png',

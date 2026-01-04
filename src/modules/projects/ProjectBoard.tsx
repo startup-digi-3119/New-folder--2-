@@ -3,7 +3,8 @@ import {
     ChevronLeft,
     Layout,
     Users,
-    MoreHorizontal
+    MoreHorizontal,
+    Trash2
 } from 'lucide-react';
 import TaskDetail from './TaskDetail';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -53,6 +54,18 @@ const ProjectBoard: React.FC = () => {
         } catch (err) {
             console.error('Error adding task:', err);
             alert('Failed to add task');
+        }
+    };
+
+    const handleDeleteTask = async (e: React.MouseEvent, taskId: string) => {
+        e.stopPropagation();
+        if (!window.confirm('Delete this task?')) return;
+        try {
+            await neon.query('DELETE FROM tasks WHERE id = $1', [taskId]);
+            setTasks(prev => prev.filter(t => t.id !== taskId));
+        } catch (err) {
+            console.error('Error deleting task:', err);
+            alert('Failed to delete task');
         }
     };
 
@@ -118,15 +131,26 @@ const ProjectBoard: React.FC = () => {
                                     <Card
                                         key={task.id}
                                         onClick={() => setSelectedTask(task)}
-                                        className="!p-4 cursor-pointer hover:border-primary/30 transition-all active:scale-95"
+                                        className="!p-4 cursor-pointer hover:border-primary/30 transition-all active:scale-95 group relative"
                                     >
-                                        <h4 className="text-sm font-bold text-gray-900">{task.title}</h4>
+                                        <div className="flex justify-between items-start">
+                                            <h4 className="text-sm font-bold text-gray-900 pr-6">{task.title}</h4>
+                                            <button
+                                                onClick={(e) => handleDeleteTask(e, task.id)}
+                                                className="absolute top-4 right-4 p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
                                         <div className="flex items-center gap-2 mt-2">
                                             <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${task.priority === 'high' ? 'bg-red-50 text-red-500' :
                                                 task.priority === 'medium' ? 'bg-amber-50 text-amber-500' : 'bg-green-50 text-green-500'
                                                 }`}>
                                                 {task.priority}
                                             </span>
+                                            {task.assigned_to && (
+                                                <span className="text-[8px] font-bold text-gray-400">@{task.assigned_to}</span>
+                                            )}
                                         </div>
                                     </Card>
                                 ))

@@ -33,7 +33,19 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     const [postContent, setPostContent] = useState('');
     const [postImage, setPostImage] = useState<string | null>(null);
     const [postLocation, setPostLocation] = useState<string | null>(null);
+    const [assignedTo, setAssignedTo] = useState('');
+    const [projectId, setProjectId] = useState<string | null>(null);
+    const [projects, setProjects] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+
+    React.useEffect(() => {
+        if (!user) return;
+        const fetchProjects = async () => {
+            const { data } = await neon.from('projects').select();
+            setProjects(data || []);
+        };
+        fetchProjects();
+    }, [user, activeModal]);
 
     const handleCreateProject = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -63,22 +75,26 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         if (!user) return;
         setLoading(true);
         try {
-            // For simplicity, we'll try to find an active project or just insert without one if allowed
-            // Real implementation would need project selection
             const { error } = await neon.from('tasks').insert({
                 user_id: user.id,
+                project_id: projectId ? Number(projectId) : null,
                 title,
                 description,
+                assigned_to: assignedTo,
                 status: 'todo',
-                priority: 'medium'
+                priority: 'medium',
+                due_date: date ? `${date}T${time}:00` : null
             });
             if (error) throw error;
             closeModal();
             setTitle('');
             setDescription('');
+            setAssignedTo('');
+            setProjectId(null);
             window.location.reload();
-        } catch (err) {
+        } catch (err: any) {
             console.error('Error creating task:', err);
+            alert(`Failed: ${err.message}`);
         } finally {
             setLoading(false);
         }
@@ -252,7 +268,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             <Modal
                 isOpen={activeModal === 'task'}
                 onClose={closeModal}
-                title="Quick Task"
+                title="Create Task"
             >
                 <form onSubmit={handleCreateTask} className="space-y-4">
                     <div className="space-y-1">
@@ -261,13 +277,56 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                             type="text"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
-                            placeholder="e.g., Update logo assets"
-                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold"
+                            placeholder="What needs to be done?"
+                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold text-gray-900"
                             required
                         />
                     </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Assign To</label>
+                        <input
+                            type="text"
+                            value={assignedTo}
+                            onChange={(e) => setAssignedTo(e.target.value)}
+                            placeholder="Person name"
+                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold"
+                        />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Date</label>
+                            <input
+                                type="date"
+                                value={date}
+                                onChange={(e) => setDate(e.target.value)}
+                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold text-xs"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Time</label>
+                            <input
+                                type="time"
+                                value={time}
+                                onChange={(e) => setTime(e.target.value)}
+                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold text-xs"
+                            />
+                        </div>
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Project (Optional)</label>
+                        <select
+                            value={projectId || ''}
+                            onChange={(e) => setProjectId(e.target.value)}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold"
+                        >
+                            <option value="">No Project</option>
+                            {projects.map(p => (
+                                <option key={p.id} value={p.id}>{p.title}</option>
+                            ))}
+                        </select>
+                    </div>
                     <Button type="submit" fullWidth disabled={loading}>
-                        {loading ? 'Adding...' : 'Add to Inbox'}
+                        {loading ? 'Creating...' : 'Add Task'}
                     </Button>
                 </form>
             </Modal>

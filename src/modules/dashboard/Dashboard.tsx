@@ -6,7 +6,8 @@ import {
     Footprints,
     Moon,
     CreditCard,
-    BarChart3
+    BarChart3,
+    ChevronRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
@@ -24,6 +25,7 @@ const Dashboard: React.FC = () => {
         tasks: '0',
         balance: '₹0'
     });
+    const [pendingTask, setPendingTask] = React.useState<any>(null);
 
     React.useEffect(() => {
         if (!user) return;
@@ -32,7 +34,7 @@ const Dashboard: React.FC = () => {
             try {
                 // Fetch today's calories from workouts
                 const today = new Date().toISOString().split('T')[0];
-                const workoutRes = await neon.query('SELECT SUM(calories_burned) as total FROM workouts WHERE user_id = $1 AND date = $2', [user.id, today]);
+                const workoutRes = await neon.query('SELECT SUM(calories_burned) as total FROM workouts WHERE user_id = $1 AND created_at::date = $2', [user.id, today]);
                 const calories = workoutRes.rows[0]?.total || 0;
 
                 // Fetch active tasks count
@@ -44,6 +46,10 @@ const Dashboard: React.FC = () => {
                 const trans = transRes.rows;
                 const income = trans.filter((t: any) => t.type === 'income').reduce((acc: number, t: any) => acc + Number(t.amount), 0);
                 const expense = trans.filter((t: any) => t.type === 'expense').reduce((acc: number, t: any) => acc + Number(t.amount), 0);
+
+                // Fetch latest pending task
+                const pendingRes = await neon.query('SELECT * FROM tasks WHERE user_id = $1 AND status != $2 ORDER BY created_at DESC LIMIT 1', [user.id, 'done']);
+                setPendingTask(pendingRes.rows[0]);
 
                 setRealStats({
                     steps: '1,240', // Mock steps for now as we don't have a sensor
@@ -122,11 +128,27 @@ const Dashboard: React.FC = () => {
                     <h3 className="text-lg font-bold text-gray-800 tracking-tighter italic">Pending Status</h3>
                 </div>
                 <div className="space-y-3">
-                    <Card className="!p-8 bg-gray-50 border-gray-100 border-dashed border-2 flex flex-col items-center justify-center text-center">
-                        <Activity className="text-gray-200 mb-3" size={32} />
-                        <p className="text-sm font-bold text-gray-400">No active sessions or tasks found.</p>
-                        <Button variant="ghost" size="sm" className="mt-4 text-primary font-black uppercase italic tracking-widest">Add First Task</Button>
-                    </Card>
+                    {!pendingTask ? (
+                        <Card className="!p-8 bg-gray-50 border-gray-100 border-dashed border-2 flex flex-col items-center justify-center text-center">
+                            <Activity className="text-gray-200 mb-3" size={32} />
+                            <p className="text-sm font-bold text-gray-400">No active sessions or tasks found.</p>
+                            <Button variant="ghost" size="sm" className="mt-4 text-primary font-black uppercase italic tracking-widest" onClick={() => navigate('/projects')}>Add First Task</Button>
+                        </Card>
+                    ) : (
+                        <Card onClick={() => navigate('/projects')} className="cursor-pointer border-primary/20 bg-primary/5">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                                        <p className="text-[10px] font-black text-primary uppercase tracking-widest">Active Objective</p>
+                                    </div>
+                                    <h4 className="text-lg font-black italic text-gray-900 uppercase tracking-tighter">{pendingTask.title}</h4>
+                                    <p className="text-xs font-bold text-gray-400">{pendingTask.assigned_to ? `@${pendingTask.assigned_to}` : 'Unassigned'}</p>
+                                </div>
+                                <ChevronRight className="text-primary" size={24} />
+                            </div>
+                        </Card>
+                    )}
                 </div>
             </section>
 
@@ -142,8 +164,8 @@ const Dashboard: React.FC = () => {
                         </div>
                         <div className="flex items-end justify-between">
                             <div>
-                                <p className="text-3xl font-black tracking-tighter italic text-white">₹0.00</p>
-                                <p className="text-xs font-medium text-gray-400 italic">No balance record this month</p>
+                                <p className="text-3xl font-black tracking-tighter italic text-white">{realStats.balance}</p>
+                                <p className="text-xs font-medium text-gray-400 italic">Total Balance</p>
                             </div>
                             <Button variant="ghost" className="bg-white/10 text-white rounded-xl px-4 h-12">
                                 <Plus size={18} />

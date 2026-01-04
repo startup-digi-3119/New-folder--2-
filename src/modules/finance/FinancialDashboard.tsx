@@ -3,7 +3,8 @@ import {
     Activity,
     PieChart,
     Wallet,
-    Plus
+    Plus,
+    Trash2
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -18,6 +19,27 @@ const FinancialDashboard: React.FC = () => {
     const [transactions, setTransactions] = React.useState<any[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [totals, setTotals] = React.useState({ balance: 0, income: 0, expense: 0 });
+
+    const handleDeleteTransaction = async (id: number) => {
+        if (!window.confirm('Delete this transaction?')) return;
+        try {
+            await neon.query('DELETE FROM transactions WHERE id = $1', [id]);
+            setTransactions(prev => prev.filter(t => t.id !== id));
+            // Recalculate totals
+            const item = transactions.find(t => t.id === id);
+            if (item) {
+                const amount = Number(item.amount);
+                setTotals(prev => ({
+                    ...prev,
+                    income: item.type === 'income' ? prev.income - amount : prev.income,
+                    expense: item.type === 'expense' ? prev.expense - amount : prev.expense,
+                    balance: item.type === 'income' ? prev.balance - amount : prev.balance + amount
+                }));
+            }
+        } catch (err) {
+            console.error('Error deleting transaction:', err);
+        }
+    };
 
     React.useEffect(() => {
         if (!user) return;
@@ -121,7 +143,7 @@ const FinancialDashboard: React.FC = () => {
                         </div>
                     ) : (
                         transactions.map(transaction => (
-                            <Card key={transaction.id} className="flex items-center justify-between !p-4 hover:bg-gray-50 transition-colors">
+                            <Card key={transaction.id} className="flex items-center justify-between !p-4 hover:bg-gray-50 transition-colors group">
                                 <div className="flex items-center gap-3">
                                     <div className={`p-2 rounded-xl ${transaction.type === 'income' ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-500'}`}>
                                         <Wallet size={18} />
@@ -131,9 +153,17 @@ const FinancialDashboard: React.FC = () => {
                                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{transaction.category} • {new Date(transaction.date).toLocaleDateString()}</p>
                                     </div>
                                 </div>
-                                <p className={`text-sm font-black italic ${transaction.type === 'income' ? 'text-emerald-600' : 'text-red-600'}`}>
-                                    {transaction.type === 'income' ? '+' : '-'}₹{Number(transaction.amount).toLocaleString('en-IN')}
-                                </p>
+                                <div className="flex items-center gap-4">
+                                    <p className={`text-sm font-black italic ${transaction.type === 'income' ? 'text-emerald-600' : 'text-red-600'}`}>
+                                        {transaction.type === 'income' ? '+' : '-'}₹{Number(transaction.amount).toLocaleString('en-IN')}
+                                    </p>
+                                    <button
+                                        onClick={() => handleDeleteTransaction(transaction.id)}
+                                        className="p-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
                             </Card>
                         ))
                     )}
