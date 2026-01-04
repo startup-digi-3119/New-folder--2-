@@ -48,6 +48,32 @@ const ProjectBoard: React.FC = () => {
         fetchData();
     }, [user, id]);
 
+    const handleAddTask = async (status: string) => {
+        if (!user || !id) return;
+        const title = window.prompt("Enter task title:");
+        if (!title) return;
+
+        try {
+            const { error } = await supabase.from('tasks').insert({
+                user_id: user.id,
+                project_id: id,
+                title,
+                status,
+                priority: 'medium'
+            });
+            if (error) throw error;
+            // Reload tasks
+            const { data: taskData } = await supabase
+                .from('tasks')
+                .select('*')
+                .eq('project_id', id);
+            setTasks(taskData || []);
+        } catch (err) {
+            console.error('Error adding task:', err);
+            alert('Failed to add task');
+        }
+    };
+
     const columns = [
         { id: 'todo', title: 'To Do', tasks: tasks.filter(t => t.status === 'todo') },
         { id: 'in_progress', title: 'In Progress', tasks: tasks.filter(t => t.status === 'in_progress') },
@@ -107,7 +133,12 @@ const ProjectBoard: React.FC = () => {
                                     </Card>
                                 ))
                             )}
-                            <button className="text-[10px] font-black text-primary uppercase italic tracking-widest mt-2 py-2 hover:bg-primary/5 rounded-xl transition-colors">+ Add Task</button>
+                            <button
+                                onClick={() => handleAddTask(column.id)}
+                                className="text-[10px] font-black text-primary uppercase italic tracking-widest mt-2 py-2 hover:bg-primary/5 rounded-xl transition-colors"
+                            >
+                                + Add Task
+                            </button>
                         </div>
                     </div>
                 ))}

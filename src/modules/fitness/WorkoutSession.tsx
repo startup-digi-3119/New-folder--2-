@@ -8,7 +8,8 @@ import {
     Dumbbell,
     CheckCircle2,
     Flame,
-    Info
+    Info,
+    Activity
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../../components/ui/Button';
@@ -16,6 +17,7 @@ import Card from '../../components/ui/Card';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../store/AuthContext';
 import { WORKOUT_PLAN } from '../../data/workoutPlan';
+import { bluetoothManager } from '../../services/bluetooth';
 import type { Exercise } from '../../data/workoutPlan';
 
 const WorkoutSession: React.FC = () => {
@@ -26,6 +28,11 @@ const WorkoutSession: React.FC = () => {
     // Timer State
     const [seconds, setSeconds] = useState(0);
     const [isActive, setIsActive] = useState(false);
+
+    // Bluetooth State
+    const [heartRate, setHeartRate] = useState(0);
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [btError, setBtError] = useState<string | null>(null);
 
     // Workout State
     const [currentDay, setCurrentDay] = useState<any>(null);
@@ -77,6 +84,35 @@ const WorkoutSession: React.FC = () => {
         const mins = Math.floor(totalSeconds / 60);
         const secs = totalSeconds % 60;
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const checkBluetoothSupport = () => {
+        // Feature detection for Web Bluetooth
+        if (!('bluetooth' in navigator)) {
+            setBtError('Bluetooth API not supported in this browser. Please use Chrome, Edge, or Bluefy on iOS.');
+            return false;
+        }
+        return true;
+    };
+
+    const startBluetoothSync = async () => {
+        setBtError(null);
+        if (!checkBluetoothSupport()) return;
+
+        setIsSyncing(true);
+        try {
+            console.log('Requesting Fire-Boltt/Standard Heart Rate device...');
+            // We scan for the standard Heart Rate Service (0x180D) which Fire-Boltt supports
+            await bluetoothManager.requestDevice();
+            await bluetoothManager.connect((bpm) => {
+                setHeartRate(bpm);
+            });
+        } catch (error: any) {
+            console.error('BT Sync Error:', error);
+            setBtError(error.message || 'Failed to connect. Ensure your watch is awake.');
+        } finally {
+            setIsSyncing(false);
+        }
     };
 
     const handleNext = () => {
@@ -204,6 +240,43 @@ const WorkoutSession: React.FC = () => {
                     <h1 className="text-8xl font-black tracking-tighter tabular-nums font-mono italic text-white drop-shadow-2xl">
                         {formatTime(seconds)}
                     </h1>
+                </div>
+
+                {/* Fire-Boltt Connection Panel */}
+                <div className="text-center space-y-4 relative z-10 w-full max-w-sm px-6">
+                    {btError && (
+                        <div className="bg-red-500/10 border border-red-500/30 p-2 rounded-xl text-[10px] text-red-500 font-bold mb-2">
+                            {btError}
+                        </div>
+                    )}
+
+                    {!heartRate ? (
+                        <div
+                            onClick={startBluetoothSync}
+                            className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:bg-white/10 transition-colors"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400">
+                                    <Activity size={18} />
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-xs font-black uppercase text-white/50 tracking-widest">Smart Watch</p>
+                                    <p className="text-sm font-bold text-white">Connect Fire-Boltt</p>
+                                </div>
+                            </div>
+                            <ChevronRight size={16} className="text-white/30" />
+                        </div>
+                    ) : (
+                        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <Activity size={18} className="text-emerald-500 animate-pulse" />
+                                <div className="text-left">
+                                    <p className="text-xs font-black uppercase text-emerald-500/50 tracking-widest">Heart Rate</p>
+                                    <p className="text-lg font-black text-emerald-400">{heartRate} BPM</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Current Exercise Card */}

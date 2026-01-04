@@ -29,6 +29,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     const [type, setType] = useState<'income' | 'expense'>('expense');
     const [category, setCategory] = useState('General');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [time, setTime] = useState('09:00');
     const [loading, setLoading] = useState(false);
 
     const handleCreateProject = async (e: React.FormEvent) => {
@@ -118,7 +119,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 description: `Event: ${description}`,
                 status: 'todo',
                 priority: 'high',
-                due_date: date
+                due_date: `${date}T${time}:00`
             });
             if (error) throw error;
             closeModal();
@@ -383,6 +384,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                             type="date"
                             value={date}
                             onChange={(e) => setDate(e.target.value)}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold"
+                            required
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Time</label>
+                        <input
+                            type="time"
+                            value={time}
+                            onChange={(e) => setTime(e.target.value)}
                             className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold"
                             required
                         />

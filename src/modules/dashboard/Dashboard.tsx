@@ -86,8 +86,8 @@ const Dashboard: React.FC = () => {
                         </div>
                         <div className="flex items-end justify-between">
                             <div>
-                                <p className="text-3xl font-black tracking-tighter italic">₹0.00</p>
-                                <p className="text-xs font-medium text-gray-500 italic">No balance record this month</p>
+                                <p className="text-3xl font-black tracking-tighter italic text-white">₹0.00</p>
+                                <p className="text-xs font-medium text-gray-400 italic">No balance record this month</p>
                             </div>
                             <Button variant="ghost" className="bg-white/10 text-white rounded-xl px-4 h-12">
                                 <Plus size={18} />
