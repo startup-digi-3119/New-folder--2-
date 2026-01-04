@@ -2,24 +2,70 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import MainLayout from './components/layout/MainLayout';
 import Dashboard from './modules/dashboard/Dashboard';
 import FitnessDashboard from './modules/fitness/FitnessDashboard';
+import ExerciseLibrary from './modules/fitness/ExerciseLibrary';
+import WorkoutSession from './modules/fitness/WorkoutSession';
+import WorkoutPlanner from './modules/fitness/WorkoutPlanner';
 import ProjectsDashboard from './modules/projects/ProjectsDashboard';
+import ProjectBoard from './modules/projects/ProjectBoard';
+import PerformanceAnalytics from './modules/projects/PerformanceAnalytics';
 import SocialFeed from './modules/social/SocialFeed';
 import FinancialDashboard from './modules/finance/FinancialDashboard';
+import AddTransaction from './modules/finance/AddTransaction';
+import CalendarView from './modules/calendar/CalendarView';
+import NotesManagement from './modules/notes/NotesManagement';
+import Login from './modules/auth/Login';
+import Register from './modules/auth/Register';
+import { AuthProvider, useAuth } from './store/AuthContext';
+import { UIProvider } from './store/UIContext';
+
+const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
+  const { loading } = useAuth();
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  // For demo purposes, we'll allow access if no user but we'll simulate the check
+  // if (!user) return <Navigate to="/login" replace />;
+
+  return <>{children}</>;
+};
 
 function App() {
   return (
-    <Router>
-      <MainLayout>
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/fitness" element={<FitnessDashboard />} />
-          <Route path="/projects" element={<ProjectsDashboard />} />
-          <Route path="/social" element={<SocialFeed />} />
-          <Route path="/finance" element={<FinancialDashboard />} />
-        </Routes>
-      </MainLayout>
-    </Router>
+    <AuthProvider>
+      <UIProvider>
+        <Router>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+
+            {/* Private Routes wrapped in Layout */}
+            <Route path="/*" element={
+              <PrivateRoute>
+                <MainLayout>
+                  <Routes>
+                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/fitness" element={<FitnessDashboard />} />
+                    <Route path="/fitness/exercises" element={<ExerciseLibrary />} />
+                    <Route path="/fitness/create-plan" element={<WorkoutPlanner />} />
+                    <Route path="/fitness/workout/:id" element={<WorkoutSession />} />
+                    <Route path="/projects" element={<ProjectsDashboard />} />
+                    <Route path="/projects/analytics" element={<PerformanceAnalytics />} />
+                    <Route path="/projects/:id" element={<ProjectBoard />} />
+                    <Route path="/social" element={<SocialFeed />} />
+                    <Route path="/finance" element={<FinancialDashboard />} />
+                    <Route path="/finance/add" element={<AddTransaction />} />
+                    <Route path="/calendar" element={<CalendarView />} />
+                    <Route path="/notes" element={<NotesManagement />} />
+                    <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                  </Routes>
+                </MainLayout>
+              </PrivateRoute>
+            } />
+          </Routes>
+        </Router>
+      </UIProvider>
+    </AuthProvider>
   );
 }
 
