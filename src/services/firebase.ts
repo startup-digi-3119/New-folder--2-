@@ -3,12 +3,13 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 
 // Firebase configuration from google-services.json
 const firebaseConfig = {
-    apiKey: "AIzaSyBrEEusvxRt1Zcq6BZaiWqHMpp6fZhMhiI",
+    apiKey: "AIzaSyDwAH2fhWL8Ntx2H8r4YgDsFxIlf5D2Udg",
     authDomain: "myplan-be94f.firebaseapp.com",
     projectId: "myplan-be94f",
     storageBucket: "myplan-be94f.firebasestorage.app",
     messagingSenderId: "697721057428",
-    appId: "1:697721057428:android:8a73bea16a3c378c7dc481"
+    appId: "1:697721057428:web:889220fbd2b2f5197dc481",
+    measurementId: "G-V8FRVX0V2E"
 };
 
 // Initialize Firebase
