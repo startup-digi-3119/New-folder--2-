@@ -39,7 +39,7 @@ const Register: React.FC = () => {
     };
 
     return (
-        <div className="min-h-[80vh] flex flex-col justify-center px-2 py-10 animate-in fade-in duration-500">
+        <div className="min-h-[80vh] flex flex-col justify-center px-2 py-10 animate-in fade-in duration-200">
             <div className="mb-10 text-center space-y-2">
                 <h1 className="text-3xl font-black text-gray-900 tracking-tight">Create Account</h1>
                 <p className="text-gray-500 font-medium">Start your journey to a better you.</p>

@@ -11,7 +11,7 @@ const ExerciseLibrary: React.FC = () => {
     const categories = ['All', 'Chest', 'Back', 'Legs', 'Cardio', 'Shoulders'];
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-200">
             <header>
                 <h2 className="text-2xl font-black text-gray-900 tracking-tighter italic uppercase">Exercise Bank</h2>
                 <p className="text-gray-500">Browse movements or create your own custom drills.</p>

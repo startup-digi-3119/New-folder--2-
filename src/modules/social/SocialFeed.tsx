@@ -45,7 +45,7 @@ const SocialFeed: React.FC = () => {
     const [activeTab, setActiveTab] = useState('Explore');
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-700 pb-24">
+        <div className="space-y-8 animate-in fade-in duration-100 pb-24">
             <header className="flex items-center justify-between">
                 <div>
                     <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter">Social</h2>
@@ -116,7 +116,7 @@ const SocialFeed: React.FC = () => {
                             <p className="text-sm text-gray-700 leading-relaxed font-medium">{post.content}</p>
 
                             <div className="rounded-2xl overflow-hidden aspect-[4/3] bg-gray-100 relative">
-                                <img src={post.image} alt="post content" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                                <img src={post.image} alt="post content" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                             </div>
 
                             {/* Stats Row */}

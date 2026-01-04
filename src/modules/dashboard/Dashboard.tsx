@@ -7,7 +7,8 @@ import {
     Moon,
     CreditCard,
     BarChart3,
-    ChevronRight
+    ChevronRight,
+    Folder
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
@@ -80,7 +81,7 @@ const Dashboard: React.FC = () => {
 
                 setRealStats({
                     steps: (hStats.steps || 0).toLocaleString(),
-                    calories: (Number(calories) + Number(hStats.consumed || 0)).toString(),
+                    calories: Number(calories).toString(),
                     tasks: taskRes.rows[0]?.count.toString() || '0',
                     balance: `₹${(income - expense).toLocaleString()}`,
                     sleep: `${sleepHrs}h ${sleepMins}m`
@@ -94,14 +95,14 @@ const Dashboard: React.FC = () => {
     }, [user, range]);
 
     const stats = [
-        { id: 'food', label: range === 'today' ? 'Consumed' : 'Calories', value: realStats.calories, icon: <Flame className="text-orange-500" />, color: 'bg-orange-500/10' },
-        { id: 'project', label: 'Active Projects', value: realStats.tasks, icon: <Activity className="text-primary" />, color: 'bg-primary/10' },
-        { id: 'steps', label: 'Steps', value: realStats.steps, icon: <Footprints className="text-emerald-500" />, color: 'bg-emerald-500/10' },
-        { id: 'sleep', label: 'Sleep', value: realStats.sleep, icon: <Moon className="text-secondary" />, color: 'bg-secondary/10' },
+        { id: 'food', label: 'Burned', value: `${realStats.calories} kcal`, icon: <Flame className="text-orange-500" />, color: 'bg-orange-500/10' },
+        { id: 'project', label: 'Active Projects', value: realStats.tasks, icon: <Folder className="text-primary" />, color: 'bg-primary/10' },
+        { id: 'steps', label: "Today's Steps", value: realStats.steps, icon: <Footprints className="text-emerald-500" />, color: 'bg-emerald-500/10' },
+        { id: 'sleep', label: 'Total Sleep', value: realStats.sleep, icon: <Moon className="text-secondary" />, color: 'bg-secondary/10' },
     ];
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-100">
             {/* Welcome Section */}
             <section className="flex items-end justify-between">
                 <div className="space-y-1">

@@ -97,7 +97,7 @@ const ProjectBoard: React.FC = () => {
     ];
 
     return (
-        <div className="h-screen flex flex-col bg-slate-50 animate-in fade-in duration-500 overflow-hidden">
+        <div className="h-screen flex flex-col bg-slate-50 animate-in fade-in duration-200 overflow-hidden">
             <header className="p-4 bg-white border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <button onClick={() => navigate('/projects')} className="p-2 hover:bg-gray-100 rounded-xl">

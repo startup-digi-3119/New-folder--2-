@@ -51,7 +51,7 @@ const WorkoutPlanner: React.FC = () => {
     };
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-24">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-100 pb-24">
             <header className="space-y-4">
                 <div className="flex items-center justify-between">
                     <div>

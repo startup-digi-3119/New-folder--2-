@@ -77,7 +77,7 @@ const PerformanceAnalytics: React.FC = () => {
     };
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-700 pb-24">
+        <div className="space-y-8 animate-in fade-in duration-100 pb-24">
             <header className="flex items-center justify-between">
                 <div>
                     <div className="flex items-center gap-2 mb-1">

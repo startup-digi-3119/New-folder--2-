@@ -28,7 +28,7 @@ const AddTransaction: React.FC = () => {
     const [category, setCategory] = useState('food');
 
     return (
-        <div className="min-h-screen bg-background animate-in slide-in-from-bottom-8 duration-500">
+        <div className="min-h-screen bg-background animate-in slide-in-from-bottom-8 duration-200">
             <header className="flex items-center justify-between p-6">
                 <button onClick={() => navigate(-1)} className="p-2 bg-white rounded-xl shadow-sm border border-gray-100 text-gray-500">
                     <X size={24} />

@@ -49,7 +49,7 @@ const CalendarView: React.FC = () => {
     }, [user, selectedDay]);
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-700 pb-24">
+        <div className="space-y-8 animate-in fade-in duration-100 pb-24">
             <header className="flex items-center justify-between">
                 <div>
                     <h2 className="text-3xl font-black text-gray-900 tracking-tighter italic">Calendar</h2>

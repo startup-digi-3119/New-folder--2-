@@ -35,7 +35,7 @@ const Login: React.FC = () => {
     };
 
     return (
-        <div className="min-h-[80vh] flex flex-col justify-center px-2 py-10 animate-in fade-in duration-500">
+        <div className="min-h-[80vh] flex flex-col justify-center px-2 py-10 animate-in fade-in duration-200">
             <div className="mb-10 text-center space-y-2">
                 <div className="inline-flex p-3 bg-primary/10 rounded-3xl text-primary mb-2">
                     <Activity size={32} />

@@ -174,18 +174,21 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         if (!user) return;
         setLoading(true);
         try {
-            const today = new Date().toISOString().split('T')[0];
+            const targetDate = date || getLocalDate();
+            // Convert hours to minutes for storage
+            const activeMinutes = Math.round((Number(duration) || 0) * 60);
+
             const { error } = await neon.from('health_stats').insert({
                 user_id: user.id,
-                date: today,
+                date: targetDate,
                 steps: Number(stepsValue),
-                active_minutes: Number(duration) || 0
+                active_minutes: activeMinutes
             });
             if (error && error.message.includes('unique constraint')) {
                 await neon.from('health_stats').update({
                     steps: Number(stepsValue),
-                    active_minutes: Number(duration) || 0
-                }).match({ user_id: user.id, date: today });
+                    active_minutes: activeMinutes
+                }).match({ user_id: user.id, date: targetDate });
             } else if (error) throw error;
             closeModal();
             setStepsValue('');
@@ -204,14 +207,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         if (!user) return;
         setLoading(true);
         try {
-            const today = new Date().toISOString().split('T')[0];
+            const targetDate = date || getLocalDate();
+            const sleepMinutes = Math.round(Number(sleepValue) * 60);
             const { error } = await neon.from('health_stats').insert({
                 user_id: user.id,
-                date: today,
-                sleep_minutes: Number(sleepValue)
+                date: targetDate,
+                sleep_minutes: sleepMinutes
             });
             if (error && error.message.includes('unique constraint')) {
-                await neon.from('health_stats').update({ sleep_minutes: Number(sleepValue) }).match({ user_id: user.id, date: today });
+                await neon.from('health_stats').update({ sleep_minutes: sleepMinutes }).match({ user_id: user.id, date: targetDate });
             } else if (error) throw error;
             closeModal();
             setSleepValue('');
@@ -229,16 +233,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         if (!user) return;
         setLoading(true);
         try {
-            const today = new Date().toISOString().split('T')[0];
+            const targetDate = date || getLocalDate();
             const { error } = await neon.from('health_stats').insert({
                 user_id: user.id,
-                date: today,
+                date: targetDate,
                 calories_consumed: Number(foodCalories)
             });
             if (error && error.message.includes('unique constraint')) {
-                const existing = await neon.query('SELECT calories_consumed FROM health_stats WHERE user_id = $1 AND date = $2', [user.id, today]);
+                const existing = await neon.query('SELECT calories_consumed FROM health_stats WHERE user_id = $1 AND date = $2', [user.id, targetDate]);
                 const newTotal = (existing.rows[0]?.calories_consumed || 0) + Number(foodCalories);
-                await neon.from('health_stats').update({ calories_consumed: newTotal }).match({ user_id: user.id, date: today });
+                await neon.from('health_stats').update({ calories_consumed: newTotal }).match({ user_id: user.id, date: targetDate });
             } else if (error) throw error;
             closeModal();
             setFoodValue('');
@@ -813,14 +817,35 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                         />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Duration (Minutes)</label>
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Duration (Hours)</label>
                         <input
                             type="number"
+                            step="0.1"
                             value={duration}
                             onChange={(e) => setDuration(e.target.value)}
-                            placeholder="e.g., 45"
+                            placeholder="e.g., 1.5"
                             className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold text-lg"
                         />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Date</label>
+                            <input
+                                type="date"
+                                value={date}
+                                onChange={(e) => setDate(e.target.value)}
+                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold text-xs"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Time</label>
+                            <input
+                                type="time"
+                                value={time}
+                                onChange={(e) => setTime(e.target.value)}
+                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold text-xs"
+                            />
+                        </div>
                     </div>
                     <Button type="submit" fullWidth disabled={loading}>
                         {loading ? 'Recording...' : 'Update Steps'}
@@ -836,16 +861,37 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             >
                 <form onSubmit={handleCreateSleep} className="space-y-4">
                     <div className="space-y-1">
-                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Sleep Duration (Minutes)</label>
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Sleep Duration (Hours)</label>
                         <input
                             type="number"
+                            step="0.5"
                             value={sleepValue}
                             onChange={(e) => setSleepValue(e.target.value)}
-                            placeholder="e.g., 480"
+                            placeholder="e.g., 8"
                             className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold text-2xl"
                             required
                         />
-                        <p className="text-[10px] text-gray-400 mt-1 ml-1 font-medium">8 hours = 480 mins</p>
+                        <p className="text-[10px] text-gray-400 mt-1 ml-1 font-medium">Enter hours (e.g., 7.5)</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Date</label>
+                            <input
+                                type="date"
+                                value={date}
+                                onChange={(e) => setDate(e.target.value)}
+                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold text-xs"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Time</label>
+                            <input
+                                type="time"
+                                value={time}
+                                onChange={(e) => setTime(e.target.value)}
+                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold text-xs"
+                            />
+                        </div>
                     </div>
                     <Button type="submit" fullWidth disabled={loading}>
                         {loading ? 'Recording...' : 'Update Sleep'}
@@ -880,6 +926,26 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                             className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold text-2xl"
                             required
                         />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Date</label>
+                            <input
+                                type="date"
+                                value={date}
+                                onChange={(e) => setDate(e.target.value)}
+                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold text-xs"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Time</label>
+                            <input
+                                type="time"
+                                value={time}
+                                onChange={(e) => setTime(e.target.value)}
+                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold text-xs"
+                            />
+                        </div>
                     </div>
                     <Button type="submit" fullWidth disabled={loading}>
                         {loading ? 'Logging...' : 'Add Food'}

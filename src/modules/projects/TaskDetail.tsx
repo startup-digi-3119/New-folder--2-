@@ -102,7 +102,7 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onStatusUpdate, 
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center animate-in fade-in duration-300">
             <div
-                className="bg-white w-full max-w-2xl sm:rounded-3xl h-[90vh] sm:h-auto sm:max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom-8 duration-500 shadow-2xl"
+                className="bg-white w-full max-w-2xl sm:rounded-3xl h-[90vh] sm:h-auto sm:max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom-8 duration-200 shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}

@@ -239,7 +239,7 @@ const WorkoutSession: React.FC = () => {
 
     if (isFinished) {
         return (
-            <div className="min-h-screen bg-slate-900 text-white p-6 flex flex-col items-center justify-center space-y-8 animate-in fade-in duration-500">
+            <div className="min-h-screen bg-slate-900 text-white p-6 flex flex-col items-center justify-center space-y-8 animate-in fade-in duration-200">
                 <div className="w-24 h-24 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-500 mb-4 animate-bounce">
                     <CheckCircle2 size={48} />
                 </div>
@@ -349,7 +349,7 @@ const WorkoutSession: React.FC = () => {
 
                 {/* Current Exercise Card */}
                 {currentEx && (
-                    <div className="w-full max-w-sm space-y-4 animate-in slide-in-from-bottom-8 duration-500">
+                    <div className="w-full max-w-sm space-y-4 animate-in slide-in-from-bottom-8 duration-200">
                         <Card className="bg-white/10 border-white/5 backdrop-blur-xl p-6 border-none text-white relative overflow-hidden">
                             <div className="relative z-10">
                                 <div className="flex items-start justify-between mb-4">
