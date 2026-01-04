@@ -23,14 +23,12 @@ const WorkoutPlanner: React.FC = () => {
         setIsGenerating(true);
         setAiResponse(null);
         try {
-            const response = await fetch('https://api.perplexity.ai/chat/completions', {
+            const response = await fetch('/api/generate-workout', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${import.meta.env.VITE_PERPLEXITY_API_KEY}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: 'llama-3.1-sonar-small-128k-online',
                     messages: [
                         {
                             role: 'system',
@@ -40,17 +38,20 @@ const WorkoutPlanner: React.FC = () => {
                             role: 'user',
                             content: `Generate a ${days}-day per week workout plan for a ${level} level user with the goal: ${goal}.`
                         }
-                    ],
-                    max_tokens: 1000,
-                    temperature: 0.2
+                    ]
                 })
             });
 
             const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'AI request failed');
+            }
+
             setAiResponse(data.choices[0].message.content);
-        } catch (err) {
+        } catch (err: any) {
             console.error('AI Generation failed:', err);
-            setAiResponse('Failed to connect to AI. Please ensure your API key is correctly configured in .env.local');
+            setAiResponse(`Failed to connect to AI: ${err.message}. Please ensure your PERPLEXITY_API_KEY is configured in your Vercel Project Settings.`);
         } finally {
             setIsGenerating(false);
         }
