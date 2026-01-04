@@ -20,11 +20,11 @@ import { AuthProvider, useAuth } from './store/AuthContext';
 import { UIProvider } from './store/UIContext';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
-  const { loading } = useAuth();
+  const { user, loading } = useAuth();
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  // For demo purposes, we'll allow access if no user but we'll simulate the check
-  // if (!user) return <Navigate to="/login" replace />;
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-black italic tracking-tighter text-2xl animate-pulse">Loading MyPlan...</div>;
+
+  if (!user) return <Navigate to="/login" replace />;
 
   return <>{children}</>;
 };

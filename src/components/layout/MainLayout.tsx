@@ -341,7 +341,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                             <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1">Projects</p>
                         </div>
                     </div>
-                    <Button fullWidth onClick={() => alert('Profile editing coming soon!')} className="mt-4">Edit Profile</Button>
+                    <div className="pt-4 mt-2 border-t border-gray-100">
+                        <Button fullWidth onClick={() => alert('Profile editing coming soon!')} className="mb-2">Edit Profile</Button>
+                        <Button variant="ghost" fullWidth onClick={handleSignOut} className="text-red-500 font-black uppercase italic tracking-widest text-xs h-12">Sign Out</Button>
+                    </div>
                 </div>
             </Modal>
 
