@@ -80,22 +80,24 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, onClose }) => {
                     </nav>
 
                     <div className="p-4 border-t border-gray-100 space-y-2">
-                        {deferredPrompt && (
-                            <button
-                                onClick={() => {
+                        <button
+                            onClick={() => {
+                                if (deferredPrompt) {
                                     deferredPrompt.prompt();
                                     deferredPrompt.userChoice.then((choiceResult: any) => {
                                         if (choiceResult.outcome === 'accepted') {
                                             setDeferredPrompt(null);
                                         }
                                     });
-                                }}
-                                className="flex items-center gap-3 w-full px-4 py-3 text-white bg-primary font-bold hover:bg-primary/90 rounded-2xl transition-all shadow-lg shadow-primary/20"
-                            >
-                                <Download size={20} />
-                                <span className="text-sm">Install App</span>
-                            </button>
-                        )}
+                                } else {
+                                    alert("To install MyPlan:\n\n1. Tap your browser's menu (3 dots or Share icon)\n2. Select 'Install App' or 'Add to Home Screen'");
+                                }
+                            }}
+                            className="flex items-center gap-3 w-full px-4 py-3 text-white bg-primary font-bold hover:bg-primary/90 rounded-2xl transition-all shadow-lg shadow-primary/20"
+                        >
+                            <Download size={20} />
+                            <span className="text-sm">Install App</span>
+                        </button>
                         <button
                             onClick={() => {
                                 signOut();
