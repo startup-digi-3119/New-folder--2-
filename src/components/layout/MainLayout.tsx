@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, CreditCard, Bell } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import Header from './Header';
 import BottomNav from './BottomNav';
 import MobileSidebar from './MobileSidebar';
