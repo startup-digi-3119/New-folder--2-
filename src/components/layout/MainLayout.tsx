@@ -42,6 +42,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     const [assignedTo, setAssignedTo] = useState('');
     const [projectId, setProjectId] = useState<string | null>(null);
     const [projects, setProjects] = useState<any[]>([]);
+    const [duration, setDuration] = useState('');
 
     const handleSignOut = async () => {
         await signOut();
@@ -162,13 +163,18 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             const { error } = await neon.from('health_stats').insert({
                 user_id: user.id,
                 date: today,
-                steps: Number(stepsValue)
+                steps: Number(stepsValue),
+                active_minutes: Number(duration) || 0
             });
             if (error && error.message.includes('unique constraint')) {
-                await neon.from('health_stats').update({ steps: Number(stepsValue) }).match({ user_id: user.id, date: today });
+                await neon.from('health_stats').update({
+                    steps: Number(stepsValue),
+                    active_minutes: Number(duration) || 0
+                }).match({ user_id: user.id, date: today });
             } else if (error) throw error;
             closeModal();
             setStepsValue('');
+            setDuration('');
             window.location.reload();
         } catch (err: any) {
             console.error('Error:', err);
@@ -226,6 +232,30 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         } catch (err: any) {
             console.error('Error:', err);
             alert(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResetFitness = async () => {
+        if (!user || !window.confirm('Reset all fitness data for today?')) return;
+        setLoading(true);
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            await neon.from('health_stats').update({
+                steps: 0,
+                calories_consumed: 0,
+                sleep_minutes: 0,
+                active_minutes: 0
+            }).match({ user_id: user.id, date: today });
+
+            // Also deactivate active workouts
+            await neon.from('workouts').update({ status: 'cancelled' }).match({ user_id: user.id, status: 'active' });
+
+            closeModal();
+            window.location.reload();
+        } catch (err) {
+            console.error('Error resetting fitness:', err);
         } finally {
             setLoading(false);
         }
@@ -345,7 +375,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
     return (
         <div className="min-h-screen bg-slate-50">
-            <Header onMenuClick={() => setIsSidebarOpen(true)} />
+            <Header
+                onMenuClick={() => setIsSidebarOpen(true)}
+                photoUrl={photoUrl}
+            />
 
             <MobileSidebar
                 isOpen={isSidebarOpen}
@@ -744,9 +777,20 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                             required
                         />
                     </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Duration (Minutes)</label>
+                        <input
+                            type="number"
+                            value={duration}
+                            onChange={(e) => setDuration(e.target.value)}
+                            placeholder="e.g., 45"
+                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold text-lg"
+                        />
+                    </div>
                     <Button type="submit" fullWidth disabled={loading}>
                         {loading ? 'Recording...' : 'Update Steps'}
                     </Button>
+                    <Button variant="ghost" fullWidth onClick={handleResetFitness} className="text-red-500 font-black uppercase italic tracking-widest text-xs h-12 mt-2">Reset Today's Stats</Button>
                 </form>
             </Modal>
 
@@ -809,7 +853,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             </Modal>
 
             <BottomNav />
-        </div>
+        </div >
     );
 };
 

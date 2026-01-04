@@ -93,7 +93,7 @@ const Dashboard: React.FC = () => {
     }, [user, range]);
 
     const stats = [
-        { id: 'food', label: range === 'today' ? 'Today\'s Calories' : 'Calories', value: realStats.calories, icon: <Flame className="text-orange-500" />, color: 'bg-orange-500/10' },
+        { id: 'food', label: range === 'today' ? 'Consumed' : 'Calories', value: realStats.calories, icon: <Flame className="text-orange-500" />, color: 'bg-orange-500/10' },
         { id: 'task', label: 'Active Tasks', value: realStats.tasks, icon: <Activity className="text-primary" />, color: 'bg-primary/10' },
         { id: 'steps', label: 'Steps', value: realStats.steps, icon: <Footprints className="text-emerald-500" />, color: 'bg-emerald-500/10' },
         { id: 'sleep', label: 'Sleep', value: realStats.sleep, icon: <Moon className="text-secondary" />, color: 'bg-secondary/10' },

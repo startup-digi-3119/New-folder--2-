@@ -21,6 +21,7 @@ const NotesManagement: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [notes, setNotes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [viewingNote, setViewingNote] = useState<any | null>(null);
     const [editingNote, setEditingNote] = useState<any | null>(null);
 
     const fetchNotes = async () => {
@@ -120,7 +121,7 @@ const NotesManagement: React.FC = () => {
                     {filteredNotes.map((note) => (
                         <Card
                             key={note.id}
-                            onClick={() => setEditingNote(note)}
+                            onClick={() => setViewingNote(note)}
                             className="relative group hover:border-primary/20 transition-all cursor-pointer"
                         >
                             <div className="flex items-start justify-between">
@@ -145,12 +146,71 @@ const NotesManagement: React.FC = () => {
                 </div>
             )}
 
+            {/* Note Preview Modal */}
+            {viewingNote && (
+                <div
+                    className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300"
+                    onClick={() => setViewingNote(null)}
+                >
+                    <Card className="w-full max-w-lg scale-in flex flex-col gap-6 !p-8 shadow-2xl relative" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-primary/10 rounded-xl text-primary">
+                                    <FileText size={20} />
+                                </div>
+                                <h3 className="text-xl font-black italic tracking-tighter text-gray-900 uppercase">Note Preview</h3>
+                            </div>
+                            <button onClick={() => setViewingNote(null)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">✕</button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Title</p>
+                                <h4 className="text-lg font-bold text-gray-900">{viewingNote.title || 'Untitled Note'}</h4>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Content</p>
+                                <div className="bg-gray-50 rounded-2xl p-6 min-h-[200px] max-h-[400px] overflow-y-auto">
+                                    <p className="text-sm text-gray-600 font-medium whitespace-pre-wrap">{viewingNote.content}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] font-black text-gray-300 uppercase tracking-widest">
+                                <span>Created on {new Date(viewingNote.created_at).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                            <Button variant="outline" fullWidth onClick={() => setViewingNote(null)}>Close</Button>
+                            <Button variant="primary" fullWidth onClick={() => {
+                                setEditingNote(viewingNote);
+                                setViewingNote(null);
+                            }}>Edit Note</Button>
+                        </div>
+
+                        <button
+                            onClick={() => {
+                                handleDeleteNote(viewingNote.id);
+                                setViewingNote(null);
+                            }}
+                            className="absolute top-8 right-16 p-2 text-gray-300 hover:text-red-500 transition-colors"
+                        >
+                            <Trash2 size={18} />
+                        </button>
+                    </Card>
+                </div>
+            )}
+
             {/* Note Editor Modal */}
             {editingNote && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
                     <Card className="w-full max-w-lg scale-in flex flex-col gap-4 !p-6 shadow-2xl">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-black italic tracking-tighter text-gray-900 uppercase">Edit Note</h3>
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-primary/10 rounded-xl text-primary">
+                                    <Activity size={20} />
+                                </div>
+                                <h3 className="text-xl font-black italic tracking-tighter text-gray-900 uppercase">Edit Note</h3>
+                            </div>
                             <button onClick={() => setEditingNote(null)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">✕</button>
                         </div>
                         <form onSubmit={handleUpdateNote} className="space-y-4">
@@ -173,7 +233,10 @@ const NotesManagement: React.FC = () => {
                                     required
                                 />
                             </div>
-                            <Button type="submit" fullWidth>Save Changes</Button>
+                            <div className="flex gap-3">
+                                <Button type="button" variant="outline" fullWidth onClick={() => setEditingNote(null)}>Cancel</Button>
+                                <Button type="submit" fullWidth>Save Changes</Button>
+                            </div>
                         </form>
                     </Card>
                 </div>

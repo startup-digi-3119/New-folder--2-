@@ -7,19 +7,39 @@ import {
     AlignLeft,
     CheckSquare,
     ChevronRight,
-    MoreVertical,
     Calendar
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
+import { neon } from '../../services/neon';
 
 interface TaskDetailProps {
     task: any;
     onClose: () => void;
     onStatusUpdate: (newStatus: string) => void;
+    onUpdate?: (updatedTask: any) => void;
 }
 
-const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onStatusUpdate }) => {
+const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onStatusUpdate, onUpdate }) => {
+    const [isEditing, setIsEditing] = React.useState(false);
+    const [editForm, setEditForm] = React.useState({
+        title: task.title,
+        description: task.description || '',
+        priority: task.priority || 'medium',
+        assigned_to: task.assigned_to || ''
+    });
+
+    const handleSave = async () => {
+        try {
+            const { error } = await neon.from('tasks').update(editForm).match({ id: task.id });
+            if (error) throw error;
+            setIsEditing(false);
+            if (onUpdate) onUpdate({ ...task, ...editForm });
+        } catch (err) {
+            console.error('Error updating task:', err);
+            alert('Failed to update task');
+        }
+    };
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center animate-in fade-in duration-300">
             <div
@@ -29,15 +49,15 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onStatusUpdate }
                 {/* Header */}
                 <header className="sticky top-0 bg-white border-b border-gray-100 p-6 flex items-center justify-between z-10">
                     <div className="flex items-center gap-4">
-                        <div className={`p-2 rounded-xl bg-orange-100 text-orange-600`}>
+                        <div className={`p-2 rounded-xl ${task.status === 'Done' ? 'bg-emerald-100 text-emerald-600' : 'bg-orange-100 text-orange-600'}`}>
                             <CheckSquare size={20} />
                         </div>
                         <h3 className="font-black text-gray-900 truncate">TASK-{task.id}</h3>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button className="p-2 text-gray-400 hover:text-gray-900">
-                            <MoreVertical size={20} />
-                        </button>
+                        {!isEditing && (
+                            <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>Edit</Button>
+                        )}
                         <button onClick={onClose} className="p-2 bg-gray-50 rounded-xl text-gray-400 hover:text-gray-900 transition-colors">
                             <X size={20} />
                         </button>
@@ -47,16 +67,36 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onStatusUpdate }
                 <div className="p-8 space-y-10">
                     {/* Title Section */}
                     <section className="space-y-4">
-                        <h2 className="text-3xl font-black text-gray-900 leading-tight">
-                            {task.title}
-                        </h2>
+                        {isEditing ? (
+                            <input
+                                type="text"
+                                value={editForm.title}
+                                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                                className="text-2xl font-black text-gray-900 w-full bg-gray-50 border-none rounded-xl p-2 focus:ring-2 focus:ring-primary/20 outline-none"
+                            />
+                        ) : (
+                            <h2 className="text-3xl font-black text-gray-900 leading-tight">
+                                {task.title}
+                            </h2>
+                        )}
                         <div className="flex flex-wrap gap-2">
-                            <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest rounded-full">
-                                High Priority
-                            </span>
-                            <span className="px-3 py-1 bg-gray-100 text-gray-500 text-[10px] font-black uppercase tracking-widest rounded-full">
-                                Documentation
-                            </span>
+                            {isEditing ? (
+                                <select
+                                    value={editForm.priority}
+                                    onChange={(e) => setEditForm({ ...editForm, priority: e.target.value })}
+                                    className="px-3 py-1 bg-gray-100 text-gray-500 text-[10px] font-black uppercase tracking-widest rounded-full outline-none"
+                                >
+                                    <option value="high">High Priority</option>
+                                    <option value="medium">Medium Priority</option>
+                                    <option value="low">Low Priority</option>
+                                </select>
+                            ) : (
+                                <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full ${task.priority === 'high' ? 'bg-red-50 text-red-500' :
+                                    task.priority === 'medium' ? 'bg-amber-50 text-amber-500' : 'bg-green-50 text-green-500'
+                                    }`}>
+                                    {task.priority || 'medium'} Priority
+                                </span>
+                            )}
                         </div>
                     </section>
 
@@ -99,13 +139,27 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onStatusUpdate }
                             <h4 className="font-black uppercase tracking-widest text-sm">Description</h4>
                         </div>
                         <Card className="bg-gray-50 border-none !p-6">
-                            <p className="text-sm text-gray-600 leading-relaxed font-medium">
-                                The current implementation of the authentication flow lacks proper feedback for network errors.
-                                We need to add a global error toast system and ensure that the loading states are correctly
-                                restored when a request fails.
-                            </p>
+                            {isEditing ? (
+                                <textarea
+                                    value={editForm.description}
+                                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                                    className="w-full bg-transparent border-none focus:ring-0 outline-none text-sm text-gray-600 font-medium min-h-[100px] resize-none"
+                                    placeholder="Add a detailed description..."
+                                />
+                            ) : (
+                                <p className="text-sm text-gray-600 leading-relaxed font-medium">
+                                    {task.description || 'No description provided.'}
+                                </p>
+                            )}
                         </Card>
                     </section>
+
+                    {isEditing && (
+                        <div className="flex gap-3">
+                            <Button variant="outline" fullWidth onClick={() => setIsEditing(false)}>Cancel</Button>
+                            <Button variant="primary" fullWidth onClick={handleSave}>Save Changes</Button>
+                        </div>
+                    )}
 
                     {/* Subtasks */}
                     <section className="space-y-4">

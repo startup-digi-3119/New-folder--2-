@@ -4,7 +4,9 @@ import {
     Layout,
     Users,
     MoreHorizontal,
-    Trash2
+    Trash2,
+    CheckCircle2,
+    ArrowRightCircle
 } from 'lucide-react';
 import TaskDetail from './TaskDetail';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -20,6 +22,7 @@ const ProjectBoard: React.FC = () => {
     const [selectedTask, setSelectedTask] = useState<any | null>(null);
     const [project, setProject] = useState<any>(null);
     const [tasks, setTasks] = useState<any[]>([]);
+    const [isSprintActive, setIsSprintActive] = useState(false);
 
     const fetchData = async () => {
         if (!user || !id) return;
@@ -86,9 +89,9 @@ const ProjectBoard: React.FC = () => {
     };
 
     const columns = [
-        { id: 'todo', title: 'To Do', tasks: tasks.filter(t => t.status.toLowerCase() === 'todo') },
-        { id: 'in_progress', title: 'In Progress', tasks: tasks.filter(t => t.status.toLowerCase() === 'inprogress' || t.status.toLowerCase() === 'in_progress') },
-        { id: 'done', title: 'Done', tasks: tasks.filter(t => t.status.toLowerCase() === 'done') },
+        { id: 'todo', title: 'To Do', tasks: tasks.filter(t => (t.status.toLowerCase() === 'todo') && (!isSprintActive || t.priority === 'high')) },
+        { id: 'in_progress', title: 'In Progress', tasks: tasks.filter(t => (t.status.toLowerCase() === 'inprogress' || t.status.toLowerCase() === 'in_progress') && (!isSprintActive || t.priority === 'high')) },
+        { id: 'done', title: 'Done', tasks: tasks.filter(t => (t.status.toLowerCase() === 'done') && (!isSprintActive || t.priority === 'high')) },
     ];
 
     return (
@@ -105,7 +108,12 @@ const ProjectBoard: React.FC = () => {
                 </div>
                 <div className="flex gap-2">
                     <button className="p-2 text-gray-400 hover:text-primary"><Users size={20} /></button>
-                    <button className="p-2 text-primary font-black italic uppercase tracking-widest text-[10px] border-2 border-primary/10 rounded-xl px-4">Sprint Set</button>
+                    <button
+                        onClick={() => setIsSprintActive(!isSprintActive)}
+                        className={`p-2 font-black italic uppercase tracking-widest text-[10px] border-2 rounded-xl px-4 transition-all ${isSprintActive ? 'bg-primary border-primary text-white shadow-lg' : 'border-primary/10 text-primary hover:bg-white'}`}
+                    >
+                        {isSprintActive ? 'Sprint Active' : 'Sprint Set'}
+                    </button>
                 </div>
             </header>
 
@@ -142,15 +150,36 @@ const ProjectBoard: React.FC = () => {
                                                 <Trash2 size={14} />
                                             </button>
                                         </div>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${task.priority === 'high' ? 'bg-red-50 text-red-500' :
-                                                task.priority === 'medium' ? 'bg-amber-50 text-amber-500' : 'bg-green-50 text-green-500'
-                                                }`}>
-                                                {task.priority}
-                                            </span>
-                                            {task.assigned_to && (
-                                                <span className="text-[8px] font-bold text-gray-400">@{task.assigned_to}</span>
-                                            )}
+                                        <div className="flex items-center justify-between mt-4">
+                                            <div className="flex items-center gap-2">
+                                                <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${task.priority === 'high' ? 'bg-red-50 text-red-500' :
+                                                    task.priority === 'medium' ? 'bg-amber-50 text-amber-500' : 'bg-green-50 text-green-500'
+                                                    }`}>
+                                                    {task.priority || 'medium'}
+                                                </span>
+                                                {task.assigned_to && (
+                                                    <span className="text-[8px] font-bold text-gray-400">@{task.assigned_to}</span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                {column.id !== 'done' && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const nextStatus = column.id === 'todo' ? 'in_progress' : 'done';
+                                                            handleStatusUpdate(task.id, nextStatus);
+                                                        }}
+                                                        className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                                    >
+                                                        <ArrowRightCircle size={16} />
+                                                    </button>
+                                                )}
+                                                {column.id === 'done' && (
+                                                    <div className="p-1.5 text-emerald-500">
+                                                        <CheckCircle2 size={16} />
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </Card>
                                 ))
@@ -171,6 +200,9 @@ const ProjectBoard: React.FC = () => {
                     task={selectedTask}
                     onClose={() => setSelectedTask(null)}
                     onStatusUpdate={(newStatus) => handleStatusUpdate(selectedTask.id, newStatus)}
+                    onUpdate={(updatedTask) => {
+                        setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+                    }}
                 />
             )}
         </div>

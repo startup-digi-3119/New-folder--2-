@@ -27,7 +27,6 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, onClose }) => {
         { icon: <Home size={20} />, label: 'Dashboard', path: '/dashboard' },
         { icon: <Activity size={20} />, label: 'Fitness', path: '/fitness' },
         { icon: <Briefcase size={20} />, label: 'Projects', path: '/projects' },
-        { icon: <Users size={20} />, label: 'Social Feed', path: '/social' },
         { icon: <Calendar size={20} />, label: 'Calendar', path: '/calendar' },
         { icon: <FileText size={20} />, label: 'Notes', path: '/notes' },
         { icon: <Wallet size={20} />, label: 'Financials', path: '/finance' },

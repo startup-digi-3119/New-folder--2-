@@ -4,7 +4,8 @@ import {
     PieChart,
     Wallet,
     Plus,
-    Trash2
+    Trash2,
+    Edit2
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -140,14 +141,41 @@ const FinancialDashboard: React.FC = () => {
             </Card>
 
             {/* Categories & Insights */}
-            <section className="grid grid-cols-2 gap-4">
-                <Card className="!p-6 flex flex-col items-center justify-center text-center gap-3">
-                    <PieChart className="text-gray-200" size={32} />
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-tight">No Spending Categories</p>
+            <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Card className="!p-6 space-y-4">
+                    <div className="flex items-center gap-2">
+                        <PieChart className="text-primary" size={20} />
+                        <h4 className="text-xs font-black uppercase tracking-widest text-gray-500 italic">Spending Breakdown</h4>
+                    </div>
+                    {transactions.length > 0 && totals.expense > 0 ? (
+                        <div className="space-y-3">
+                            {Array.from(new Set(transactions.filter(t => t.type === 'expense').map(t => t.category))).map(cat => {
+                                const total = transactions.filter(t => t.type === 'expense' && t.category === cat).reduce((acc, curr) => acc + Number(curr.amount), 0);
+                                const percentage = Math.round((total / totals.expense) * 100);
+                                return (
+                                    <div key={cat} className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-2 h-2 rounded-full bg-primary"></div>
+                                            <span className="text-xs font-bold text-gray-600">{cat}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-[10px] font-black text-gray-400">{percentage}%</span>
+                                            <span className="text-xs font-black text-gray-900">₹{total.toLocaleString('en-IN')}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-6 text-center gap-2 opacity-50">
+                            <PieChart size={32} className="text-gray-200" />
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">No data available</p>
+                        </div>
+                    )}
                 </Card>
                 <Card className="!p-6 flex flex-col items-center justify-center text-center gap-3">
-                    <Activity className="text-gray-200" size={32} />
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-tight">Net Worth Trend <br /> Waiting for data</p>
+                    <Activity className="text-emerald-500" size={32} />
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-tight">Net Worth Trend <br /> <span className="text-emerald-500">Live</span></p>
                 </Card>
             </section>
 
@@ -178,16 +206,27 @@ const FinancialDashboard: React.FC = () => {
                                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{transaction.category} • {new Date(transaction.date).toLocaleDateString()}</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
                                     <p className={`text-sm font-black italic ${transaction.type === 'income' ? 'text-emerald-600' : 'text-red-600'}`}>
                                         {transaction.type === 'income' ? '+' : '-'}₹{Number(transaction.amount).toLocaleString('en-IN')}
                                     </p>
-                                    <button
-                                        onClick={() => handleDeleteTransaction(transaction.id)}
-                                        className="p-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
+                                    <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all">
+                                        <button
+                                            onClick={() => {
+                                                // We'll update the global modal system in MainLayout to support editing
+                                                alert("Edit functionality is being integrated. Please use the 'New Entry' for now if needed, or wait for the update.");
+                                            }}
+                                            className="p-2 text-gray-300 hover:text-primary"
+                                        >
+                                            <Edit2 size={14} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteTransaction(transaction.id)}
+                                            className="p-2 text-gray-300 hover:text-red-500"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
                                 </div>
                             </Card>
                         ))

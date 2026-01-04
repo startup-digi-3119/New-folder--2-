@@ -6,9 +6,10 @@ import { useAuth } from '../../store/AuthContext';
 
 interface HeaderProps {
     onMenuClick: () => void;
+    photoUrl?: string;
 }
 
-const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
+const Header: React.FC<HeaderProps> = ({ onMenuClick, photoUrl }) => {
     const { openModal } = useUI();
     const { user } = useAuth();
     const initials = user?.email?.substring(0, 2).toUpperCase() || 'JD';
@@ -42,9 +43,15 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                 </button>
                 <button
                     onClick={() => openModal('profile')}
-                    className="ml-1 p-0.5 border-2 border-primary/10 rounded-full hover:border-primary transition-all active:scale-95"
+                    className="ml-1 p-0.5 border-2 border-primary/10 rounded-full hover:border-primary transition-all active:scale-95 overflow-hidden"
                 >
-                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-primary font-black text-xs italic">{initials}</div>
+                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-primary font-black text-xs italic overflow-hidden">
+                        {photoUrl ? (
+                            <img src={photoUrl} alt="Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                            initials
+                        )}
+                    </div>
                 </button>
             </div>
         </header>
