@@ -61,8 +61,8 @@ const Dashboard: React.FC = () => {
                 const healthRes = await neon.query(healthQuery, [user.id]);
                 const hStats = healthRes.rows[0] || { steps: 0, sleep: 0, consumed: 0 };
 
-                // 3. Active Tasks
-                const taskRes = await neon.query('SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND status != $2', [user.id, 'done']);
+                // 3. Active Projects
+                const taskRes = await neon.query('SELECT COUNT(*) FROM projects WHERE user_id = $1', [user.id]);
 
                 // 4. Financial Balance
                 const transRes = await neon.query('SELECT * FROM transactions WHERE user_id = $1', [user.id]);
@@ -94,7 +94,7 @@ const Dashboard: React.FC = () => {
 
     const stats = [
         { id: 'food', label: range === 'today' ? 'Consumed' : 'Calories', value: realStats.calories, icon: <Flame className="text-orange-500" />, color: 'bg-orange-500/10' },
-        { id: 'task', label: 'Active Tasks', value: realStats.tasks, icon: <Activity className="text-primary" />, color: 'bg-primary/10' },
+        { id: 'project', label: 'Active Projects', value: realStats.tasks, icon: <Activity className="text-primary" />, color: 'bg-primary/10' },
         { id: 'steps', label: 'Steps', value: realStats.steps, icon: <Footprints className="text-emerald-500" />, color: 'bg-emerald-500/10' },
         { id: 'sleep', label: 'Sleep', value: realStats.sleep, icon: <Moon className="text-secondary" />, color: 'bg-secondary/10' },
     ];
@@ -183,7 +183,7 @@ const Dashboard: React.FC = () => {
 
             {/* Finance Quick Entry */}
             <section>
-                <Card className="bg-gray-900 text-white overflow-hidden relative border-none">
+                <Card className="!bg-gray-900 text-white overflow-hidden relative border-none">
                     <div className="relative z-10 space-y-4">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-white/10 rounded-xl">

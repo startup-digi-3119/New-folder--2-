@@ -1,10 +1,21 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Activity, Briefcase, StickyNote, Plus } from 'lucide-react';
 import { useUI } from '../../store/UIContext';
 
 const BottomNav: React.FC = () => {
     const { openModal } = useUI();
+    const location = useLocation();
+
+    const handleFabClick = () => {
+        const path = location.pathname;
+        if (path.includes('/finance')) openModal('transaction');
+        else if (path.includes('/fitness')) openModal('food'); // Or a general fitness choice
+        else if (path.includes('/notes')) openModal('note');
+        else if (path.includes('/calendar')) openModal('event');
+        else openModal('task');
+    };
+
     const navItems = [
         { icon: <Home size={24} />, label: 'Home', path: '/dashboard' },
         { icon: <Activity size={24} />, label: 'Fitness', path: '/fitness' },
@@ -20,7 +31,7 @@ const BottomNav: React.FC = () => {
                     return (
                         <button
                             key="fab"
-                            onClick={() => openModal('task')}
+                            onClick={handleFabClick}
                             className="absolute -top-6 bg-accent text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 z-50"
                         >
                             <Plus size={28} />

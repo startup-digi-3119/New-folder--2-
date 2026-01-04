@@ -210,19 +210,19 @@ const FinancialDashboard: React.FC = () => {
                                     <p className={`text-sm font-black italic ${transaction.type === 'income' ? 'text-emerald-600' : 'text-red-600'}`}>
                                         {transaction.type === 'income' ? '+' : '-'}₹{Number(transaction.amount).toLocaleString('en-IN')}
                                     </p>
-                                    <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all">
+                                    <div className="flex items-center transition-all">
                                         <button
                                             onClick={() => {
                                                 // We'll update the global modal system in MainLayout to support editing
                                                 alert("Edit functionality is being integrated. Please use the 'New Entry' for now if needed, or wait for the update.");
                                             }}
-                                            className="p-2 text-gray-300 hover:text-primary"
+                                            className="p-2 text-gray-400 hover:text-primary"
                                         >
                                             <Edit2 size={14} />
                                         </button>
                                         <button
                                             onClick={() => handleDeleteTransaction(transaction.id)}
-                                            className="p-2 text-gray-300 hover:text-red-500"
+                                            className="p-2 text-gray-400 hover:text-red-500"
                                         >
                                             <Trash2 size={14} />
                                         </button>

@@ -6,7 +6,9 @@ import {
     MoreHorizontal,
     Trash2,
     CheckCircle2,
-    ArrowRightCircle
+    ArrowRightCircle,
+    ArrowLeftCircle,
+    Plus
 } from 'lucide-react';
 import TaskDetail from './TaskDetail';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -162,6 +164,18 @@ const ProjectBoard: React.FC = () => {
                                                 )}
                                             </div>
                                             <div className="flex items-center gap-1">
+                                                {column.id !== 'todo' && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const prevStatus = column.id === 'done' ? 'in_progress' : 'todo';
+                                                            handleStatusUpdate(task.id, prevStatus);
+                                                        }}
+                                                        className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
+                                                    >
+                                                        <ArrowLeftCircle size={16} />
+                                                    </button>
+                                                )}
                                                 {column.id !== 'done' && (
                                                     <button
                                                         onClick={(e) => {
@@ -186,9 +200,9 @@ const ProjectBoard: React.FC = () => {
                             )}
                             <button
                                 onClick={() => handleAddTask(column.id)}
-                                className="text-[10px] font-black text-primary uppercase italic tracking-widest mt-2 py-2 hover:bg-primary/5 rounded-xl transition-colors"
+                                className="flex items-center justify-center py-3 hover:bg-primary/5 rounded-2xl transition-all border-2 border-dashed border-gray-100 group mt-2"
                             >
-                                + Add Task
+                                <Plus size={18} className="text-gray-300 group-hover:text-primary transition-colors" />
                             </button>
                         </div>
                     </div>

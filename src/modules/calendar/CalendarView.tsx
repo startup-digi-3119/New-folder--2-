@@ -20,6 +20,7 @@ const CalendarView: React.FC = () => {
     const [currentDate] = useState(new Date());
     const [events, setEvents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [viewingEvent, setViewingEvent] = useState<any | null>(null);
 
     const days = Array.from({ length: 31 }, (_, i) => i + 1);
     const weekDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -102,7 +103,7 @@ const CalendarView: React.FC = () => {
                         </div>
                     ) : (
                         events.map(event => (
-                            <Card key={event.id} className="flex items-center gap-4 !p-4 group relative">
+                            <Card key={event.id} onClick={() => setViewingEvent(event)} className="flex items-center gap-4 !p-4 group relative cursor-pointer hover:border-primary/30 transition-all">
                                 <div className="p-3 bg-primary/5 rounded-2xl text-primary font-black italic text-xs">
                                     {event.due_date ? new Date(event.due_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
                                 </div>
@@ -118,7 +119,7 @@ const CalendarView: React.FC = () => {
                                             setEvents(events.filter(ev => ev.id !== event.id));
                                         }
                                     }}
-                                    className="p-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                    className="p-2 text-gray-400 hover:text-red-500 transition-all"
                                 >
                                     <Trash2 size={16} />
                                 </button>
@@ -127,6 +128,88 @@ const CalendarView: React.FC = () => {
                     )}
                 </div>
             </section>
+
+            {/* Event Preview Modal */}
+            {viewingEvent && (
+                <div
+                    className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300"
+                    onClick={() => setViewingEvent(null)}
+                >
+                    <Card
+                        className="w-full max-w-lg scale-in flex flex-col gap-8 !p-10 shadow-2xl relative border-none !bg-white"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            onClick={() => setViewingEvent(null)}
+                            className="absolute top-6 right-6 p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-900"
+                        >
+                            <Trash2 size={20} onClick={() => {
+                                if (window.confirm('Delete this event?')) {
+                                    neon.query('DELETE FROM tasks WHERE id = $1', [viewingEvent.id]);
+                                    setEvents(events.filter(ev => ev.id !== viewingEvent.id));
+                                    setViewingEvent(null);
+                                }
+                            }} className="text-red-400 hover:text-red-600" />
+                        </button>
+
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                                    <p className="text-[10px] font-black text-primary uppercase tracking-widest italic">Upcoming Event</p>
+                                </div>
+                                <h3 className="text-4xl font-black italic text-gray-900 uppercase tracking-tighter leading-tight">
+                                    {viewingEvent.title}
+                                </h3>
+                            </div>
+
+                            <div className="flex flex-wrap gap-4">
+                                <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-2xl border border-gray-100">
+                                    <CalendarIcon size={16} className="text-primary" />
+                                    <span className="text-xs font-bold text-gray-700">
+                                        {new Date(viewingEvent.due_date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-2xl border border-gray-100">
+                                    <Activity size={16} className="text-secondary" />
+                                    <span className="text-xs font-bold text-gray-700">
+                                        {new Date(viewingEvent.due_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Notes & Objectives</h4>
+                                <div className="p-6 bg-slate-50 rounded-3xl border border-gray-100">
+                                    <p className="text-sm font-medium text-gray-600 leading-relaxed">
+                                        {viewingEvent.description || "No additional notes have been added to this event."}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 pt-4">
+                                <Button
+                                    fullWidth
+                                    className="rounded-2xl h-14 font-black uppercase tracking-widest italic"
+                                    onClick={() => setViewingEvent(null)}
+                                >
+                                    Dismiss
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="px-8 rounded-2xl h-14"
+                                    onClick={() => {
+                                        setViewingEvent(null);
+                                        openModal('event'); // In a real app, we'd pass the event to edit it
+                                    }}
+                                >
+                                    Edit
+                                </Button>
+                            </div>
+                        </div>
+                    </Card>
+                </div>
+            )}
 
             {/* Productivity View */}
             <Card className="bg-primary/5 border-primary/10 p-6 flex items-center gap-4">

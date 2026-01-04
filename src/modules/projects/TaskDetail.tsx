@@ -1,13 +1,11 @@
 import React from 'react';
 import {
     X,
-    Clock,
-    Paperclip,
     MessageSquare,
     AlignLeft,
     CheckSquare,
-    ChevronRight,
-    Calendar
+    Calendar,
+    Activity
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
@@ -22,17 +20,35 @@ interface TaskDetailProps {
 
 const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onStatusUpdate, onUpdate }) => {
     const [isEditing, setIsEditing] = React.useState(false);
+    const [subtasks, setSubtasks] = React.useState<any[]>([]);
+    const [newSubtask, setNewSubtask] = React.useState('');
     const [editForm, setEditForm] = React.useState({
         title: task.title,
         description: task.description || '',
         priority: task.priority || 'medium',
-        assigned_to: task.assigned_to || ''
+        assigned_to: task.assigned_to || '',
+        due_date: task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
     });
+
+    const fetchSubtasks = async () => {
+        try {
+            const result = await neon.query('SELECT * FROM subtasks WHERE task_id = $1 ORDER BY created_at ASC', [task.id]);
+            setSubtasks(result.rows || []);
+        } catch (err) {
+            console.error('Error fetching subtasks:', err);
+        }
+    };
+
+    React.useEffect(() => {
+        fetchSubtasks();
+    }, [task.id]);
 
     const handleSave = async () => {
         try {
-            const { error } = await neon.from('tasks').update(editForm).match({ id: task.id });
-            if (error) throw error;
+            await neon.query(
+                'UPDATE tasks SET title = $1, description = $2, priority = $3, assigned_to = $4, due_date = $5 WHERE id = $6',
+                [editForm.title, editForm.description, editForm.priority, editForm.assigned_to, editForm.due_date, task.id]
+            );
             setIsEditing(false);
             if (onUpdate) onUpdate({ ...task, ...editForm });
         } catch (err) {
@@ -40,6 +56,36 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onStatusUpdate, 
             alert('Failed to update task');
         }
     };
+
+    const handleAddSubtask = async () => {
+        if (!newSubtask.trim()) return;
+        try {
+            await neon.query('INSERT INTO subtasks (task_id, title) VALUES ($1, $2)', [task.id, newSubtask]);
+            setNewSubtask('');
+            fetchSubtasks();
+        } catch (err) {
+            console.error('Error adding subtask:', err);
+        }
+    };
+
+    const toggleSubtask = async (id: number, done: boolean) => {
+        try {
+            await neon.query('UPDATE subtasks SET done = $1 WHERE id = $2', [!done, id]);
+            fetchSubtasks();
+        } catch (err) {
+            console.error('Error toggling subtask:', err);
+        }
+    };
+
+    const deleteSubtask = async (id: number) => {
+        try {
+            await neon.query('DELETE FROM subtasks WHERE id = $1', [id]);
+            fetchSubtasks();
+        } catch (err) {
+            console.error('Error deleting subtask:', err);
+        }
+    };
+
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center animate-in fade-in duration-300">
             <div
@@ -49,14 +95,14 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onStatusUpdate, 
                 {/* Header */}
                 <header className="sticky top-0 bg-white border-b border-gray-100 p-6 flex items-center justify-between z-10">
                     <div className="flex items-center gap-4">
-                        <div className={`p-2 rounded-xl ${task.status === 'Done' ? 'bg-emerald-100 text-emerald-600' : 'bg-orange-100 text-orange-600'}`}>
+                        <div className={`p-2 rounded-xl ${(task.status || '').toLowerCase() === 'done' ? 'bg-emerald-100 text-emerald-600' : 'bg-orange-100 text-orange-600'}`}>
                             <CheckSquare size={20} />
                         </div>
-                        <h3 className="font-black text-gray-900 truncate">TASK-{task.id}</h3>
+                        <h3 className="font-black text-gray-900 truncate uppercase">TASK ID: {task.id}</h3>
                     </div>
                     <div className="flex items-center gap-2">
                         {!isEditing && (
-                            <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>Edit</Button>
+                            <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>Edit Details</Button>
                         )}
                         <button onClick={onClose} className="p-2 bg-gray-50 rounded-xl text-gray-400 hover:text-gray-900 transition-colors">
                             <X size={20} />
@@ -68,30 +114,36 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onStatusUpdate, 
                     {/* Title Section */}
                     <section className="space-y-4">
                         {isEditing ? (
-                            <input
-                                type="text"
-                                value={editForm.title}
-                                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                                className="text-2xl font-black text-gray-900 w-full bg-gray-50 border-none rounded-xl p-2 focus:ring-2 focus:ring-primary/20 outline-none"
-                            />
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Task Title</label>
+                                <input
+                                    type="text"
+                                    value={editForm.title}
+                                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                                    className="text-2xl font-black text-gray-900 w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none"
+                                />
+                            </div>
                         ) : (
-                            <h2 className="text-3xl font-black text-gray-900 leading-tight">
+                            <h2 className="text-3xl font-black text-gray-900 leading-tight uppercase italic tracking-tighter">
                                 {task.title}
                             </h2>
                         )}
                         <div className="flex flex-wrap gap-2">
                             {isEditing ? (
-                                <select
-                                    value={editForm.priority}
-                                    onChange={(e) => setEditForm({ ...editForm, priority: e.target.value })}
-                                    className="px-3 py-1 bg-gray-100 text-gray-500 text-[10px] font-black uppercase tracking-widest rounded-full outline-none"
-                                >
-                                    <option value="high">High Priority</option>
-                                    <option value="medium">Medium Priority</option>
-                                    <option value="low">Low Priority</option>
-                                </select>
+                                <div className="space-y-1 w-full">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Priority</label>
+                                    <select
+                                        value={editForm.priority}
+                                        onChange={(e) => setEditForm({ ...editForm, priority: e.target.value })}
+                                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold"
+                                    >
+                                        <option value="high">High Priority</option>
+                                        <option value="medium">Medium Priority</option>
+                                        <option value="low">Low Priority</option>
+                                    </select>
+                                </div>
                             ) : (
-                                <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full ${task.priority === 'high' ? 'bg-red-50 text-red-500' :
+                                <span className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-full ${task.priority === 'high' ? 'bg-red-50 text-red-500' :
                                     task.priority === 'medium' ? 'bg-amber-50 text-amber-500' : 'bg-green-50 text-green-500'
                                     }`}>
                                     {task.priority || 'medium'} Priority
@@ -101,34 +153,50 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onStatusUpdate, 
                     </section>
 
                     {/* Quick Stats Grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                         <div className="space-y-1">
                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Assignee</p>
-                            <div className="flex items-center gap-2">
-                                <img src="https://i.pravatar.cc/100?u=me" className="w-8 h-8 rounded-full" alt="me" />
-                                <span className="text-xs font-bold text-gray-900">You</span>
-                            </div>
+                            {isEditing ? (
+                                <input
+                                    type="text"
+                                    value={editForm.assigned_to}
+                                    onChange={(e) => setEditForm({ ...editForm, assigned_to: e.target.value })}
+                                    placeholder="@username"
+                                    className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 focus:ring-2 focus:ring-primary/20 outline-none text-xs font-bold"
+                                />
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black text-[10px]">
+                                        {task.assigned_to ? task.assigned_to[0].toUpperCase() : 'U'}
+                                    </div>
+                                    <span className="text-xs font-bold text-gray-900">{task.assigned_to ? `@${task.assigned_to}` : 'Unassigned'}</span>
+                                </div>
+                            )}
                         </div>
                         <div className="space-y-1">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Reporter</p>
-                            <div className="flex items-center gap-2">
-                                <img src="https://i.pravatar.cc/100?u=boss" className="w-8 h-8 rounded-full" alt="boss" />
-                                <span className="text-xs font-bold text-gray-900">Alex</span>
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</p>
+                            <div className="flex items-center gap-2 text-primary">
+                                <Activity size={16} />
+                                <span className="text-xs font-black uppercase italic">{task.status || 'Todo'}</span>
                             </div>
                         </div>
                         <div className="space-y-1">
                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Due Date</p>
-                            <div className="flex items-center gap-2 text-gray-900">
-                                <Calendar size={16} className="text-gray-400" />
-                                <span className="text-xs font-bold">Jan 15, 2026</span>
-                            </div>
-                        </div>
-                        <div className="space-y-1">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Estimation</p>
-                            <div className="flex items-center gap-2 text-gray-900">
-                                <Clock size={16} className="text-gray-400" />
-                                <span className="text-xs font-bold">5 Points</span>
-                            </div>
+                            {isEditing ? (
+                                <input
+                                    type="date"
+                                    value={editForm.due_date}
+                                    onChange={(e) => setEditForm({ ...editForm, due_date: e.target.value })}
+                                    className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 focus:ring-2 focus:ring-primary/20 outline-none text-xs font-bold"
+                                />
+                            ) : (
+                                <div className="flex items-center gap-2 text-gray-900">
+                                    <Calendar size={16} className="text-gray-400" />
+                                    <span className="text-xs font-bold">
+                                        {task.due_date ? new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date set'}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -136,19 +204,19 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onStatusUpdate, 
                     <section className="space-y-4">
                         <div className="flex items-center gap-2 text-gray-900">
                             <AlignLeft size={20} className="text-gray-400" />
-                            <h4 className="font-black uppercase tracking-widest text-sm">Description</h4>
+                            <h4 className="font-black uppercase tracking-widest text-sm italic">Description</h4>
                         </div>
                         <Card className="bg-gray-50 border-none !p-6">
                             {isEditing ? (
                                 <textarea
                                     value={editForm.description}
                                     onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                                    className="w-full bg-transparent border-none focus:ring-0 outline-none text-sm text-gray-600 font-medium min-h-[100px] resize-none"
-                                    placeholder="Add a detailed description..."
+                                    className="w-full bg-transparent border-none focus:ring-0 outline-none text-sm text-gray-600 font-medium min-h-[120px] resize-none"
+                                    placeholder="Add detailed objectives..."
                                 />
                             ) : (
                                 <p className="text-sm text-gray-600 leading-relaxed font-medium">
-                                    {task.description || 'No description provided.'}
+                                    {task.description || 'No detailed description provided for this task.'}
                                 </p>
                             )}
                         </Card>
@@ -156,8 +224,17 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onStatusUpdate, 
 
                     {isEditing && (
                         <div className="flex gap-3">
-                            <Button variant="outline" fullWidth onClick={() => setIsEditing(false)}>Cancel</Button>
-                            <Button variant="primary" fullWidth onClick={handleSave}>Save Changes</Button>
+                            <Button variant="outline" fullWidth onClick={() => {
+                                setIsEditing(false);
+                                setEditForm({
+                                    title: task.title,
+                                    description: task.description || '',
+                                    priority: task.priority || 'medium',
+                                    assigned_to: task.assigned_to || '',
+                                    due_date: task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+                                });
+                            }}>Cancel</Button>
+                            <Button variant="primary" fullWidth onClick={handleSave}>Apply Updates</Button>
                         </div>
                     )}
 
@@ -166,77 +243,80 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onStatusUpdate, 
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 text-gray-900">
                                 <CheckSquare size={20} className="text-gray-400" />
-                                <h4 className="font-black uppercase tracking-widest text-sm">Subtasks</h4>
+                                <h4 className="font-black uppercase tracking-widest text-sm italic">Sub-Objectives</h4>
                             </div>
-                            <p className="text-[10px] font-black text-primary uppercase">2/3 Done</p>
+                            <p className="text-[10px] font-black text-primary uppercase">
+                                {subtasks.length > 0 ? `${subtasks.filter(s => s.done).length}/${subtasks.length} DONE` : 'NO SUBTASKS'}
+                            </p>
                         </div>
                         <div className="space-y-2">
-                            {[
-                                { title: 'Create Toast Component', done: true },
-                                { title: 'Integrate into Auth Service', done: true },
-                                { title: 'Add unit tests for error cases', done: false },
-                            ].map((sub, i) => (
-                                <div key={i} className="flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-2xl hover:border-primary/20 transition-all cursor-pointer">
-                                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${sub.done ? 'bg-primary border-primary text-white' : 'border-gray-200'}`}>
+                            <div className="flex gap-2 mb-4">
+                                <input
+                                    type="text"
+                                    value={newSubtask}
+                                    onChange={(e) => setNewSubtask(e.target.value)}
+                                    placeholder="Add new subtask..."
+                                    className="flex-1 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium"
+                                    onKeyPress={(e) => e.key === 'Enter' && handleAddSubtask()}
+                                />
+                                <Button size="sm" onClick={handleAddSubtask}>Add</Button>
+                            </div>
+
+                            {subtasks.map((sub) => (
+                                <div
+                                    key={sub.id}
+                                    className="flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-2xl hover:border-primary/20 transition-all group"
+                                >
+                                    <button
+                                        onClick={() => toggleSubtask(sub.id, sub.done)}
+                                        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${sub.done ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-200'}`}
+                                    >
                                         {sub.done && <CheckSquare size={12} />}
-                                    </div>
-                                    <span className={`text-sm font-bold flex-1 ${sub.done ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{sub.title}</span>
-                                    <ChevronRight size={16} className="text-gray-200" />
+                                    </button>
+                                    <span
+                                        onClick={() => toggleSubtask(sub.id, sub.done)}
+                                        className={`text-sm font-bold flex-1 cursor-pointer ${sub.done ? 'text-gray-400 line-through' : 'text-gray-900'}`}
+                                    >
+                                        {sub.title}
+                                    </span>
+                                    <button
+                                        onClick={() => deleteSubtask(sub.id)}
+                                        className="p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                    >
+                                        <X size={14} />
+                                    </button>
                                 </div>
                             ))}
                         </div>
                     </section>
 
-                    {/* Comments */}
-                    <section className="space-y-6">
+                    {/* Comments Placeholder */}
+                    <section className="space-y-6 opacity-80">
                         <div className="flex items-center gap-2 text-gray-900">
                             <MessageSquare size={20} className="text-gray-400" />
-                            <h4 className="font-black uppercase tracking-widest text-sm">Comments</h4>
+                            <h4 className="font-black uppercase tracking-widest text-sm italic">Status Log</h4>
                         </div>
-
-                        <div className="space-y-6">
-                            <div className="flex gap-4">
-                                <img src="https://i.pravatar.cc/100?u=alex" className="w-10 h-10 rounded-full" alt="alex" />
-                                <div className="flex-1 space-y-2">
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="font-black text-sm">Alex Chen</span>
-                                        <span className="text-[10px] text-gray-400 font-bold uppercase">2h ago</span>
-                                    </div>
-                                    <p className="text-sm text-gray-600 bg-gray-50 p-4 rounded-2xl rounded-tl-none font-medium">
-                                        I think we should also consider the offline case. If the user is offline, the toast should show a different message.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-4">
-                            <img src="https://i.pravatar.cc/100?u=me" className="w-10 h-10 rounded-full" alt="me" />
-                            <div className="flex-1 relative">
-                                <textarea
-                                    placeholder="Add a comment..."
-                                    className="w-full bg-white border-2 border-gray-100 rounded-3xl py-4 pl-6 pr-14 outline-none focus:border-primary transition-all text-sm font-medium min-h-[100px] resize-none"
-                                />
-                                <div className="absolute top-4 right-4 text-gray-400 hover:text-primary cursor-pointer rotate-12">
-                                    <Paperclip size={20} />
-                                </div>
-                            </div>
-                        </div>
+                        <p className="text-center py-4 bg-gray-50 rounded-2xl text-[10px] font-black text-gray-400 uppercase tracking-widest border border-dashed border-gray-100">
+                            Activity log coming soon
+                        </p>
                     </section>
                 </div>
 
                 {/* Footer Actions */}
-                <div className="flex gap-2">
-                    {['Todo', 'InProgress', 'Done'].map((status) => (
-                        <Button
-                            key={status}
-                            variant={task.status === status ? "primary" : "outline"}
-                            className={`flex-1 ${task.status === status ? 'shadow-xl shadow-primary/20' : ''}`}
-                            onClick={() => onStatusUpdate(status)}
-                        >
-                            {status === 'InProgress' ? 'Doing' : status}
-                        </Button>
-                    ))}
-                </div>
+                <footer className="sticky bottom-0 bg-white border-t border-gray-100 p-6">
+                    <div className="flex gap-2">
+                        {['todo', 'in_progress', 'done'].map((status) => (
+                            <Button
+                                key={status}
+                                variant={(task.status || '').toLowerCase() === status ? "primary" : "outline"}
+                                className={`flex-1 font-black text-[10px] uppercase tracking-widest ${(task.status || '').toLowerCase() === status ? 'shadow-lg shadow-primary/20' : ''}`}
+                                onClick={() => onStatusUpdate(status)}
+                            >
+                                {status === 'in_progress' ? 'Doing' : status}
+                            </Button>
+                        ))}
+                    </div>
+                </footer>
             </div>
         </div>
     );

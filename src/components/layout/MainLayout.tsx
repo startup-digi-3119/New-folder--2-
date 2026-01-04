@@ -249,6 +249,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 active_minutes: 0
             }).match({ user_id: user.id, date: today });
 
+            // Delete today's workout entries to mark days incomplete and remove calories
+            await neon.query('DELETE FROM workouts WHERE user_id = $1 AND created_at::date = $2', [user.id, today]);
+
             // Also deactivate active workouts
             await neon.from('workouts').update({ status: 'cancelled' }).match({ user_id: user.id, status: 'active' });
 
