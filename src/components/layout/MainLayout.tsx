@@ -18,7 +18,6 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     const [loading, setLoading] = useState(false);
-    const [profile, setProfile] = useState<any>(null);
     const [notifications, setNotifications] = useState<any[]>([]);
     const [fullName, setFullName] = useState('');
     const [bio, setBio] = useState('');
@@ -60,7 +59,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             if (profRes.data) {
                 const userProf = profRes.data.find((p: any) => p.user_id === user.id);
                 if (userProf) {
-                    setProfile(userProf);
                     setFullName(userProf.full_name || '');
                     setBio(userProf.bio || '');
                     setPhotoUrl(userProf.photo_url || '');

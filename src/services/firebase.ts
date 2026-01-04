@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword as firebaseUpdatePassword } from 'firebase/auth';
 
 // Firebase configuration from google-services.json
 const firebaseConfig = {
@@ -78,6 +78,15 @@ export const firebase = {
                     }
                 }
             };
+        },
+        updatePassword: async (newPassword: string) => {
+            if (!auth.currentUser) throw new Error('No user logged in');
+            try {
+                await firebaseUpdatePassword(auth.currentUser, newPassword);
+                return { error: null };
+            } catch (error: any) {
+                return { error: { message: error.message } };
+            }
         }
     }
 };

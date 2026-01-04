@@ -11,6 +11,7 @@ interface AuthContextType {
     user: User | null;
     loading: boolean;
     signOut: () => Promise<void>;
+    updatePassword: (password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -51,8 +52,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await firebase.auth.signOut();
     };
 
+    const updatePassword = async (password: string) => {
+        const { error } = await firebase.auth.updatePassword(password);
+        if (error) throw error;
+    };
+
     return (
-        <AuthContext.Provider value={{ user, loading, signOut }}>
+        <AuthContext.Provider value={{ user, loading, signOut, updatePassword }}>
             {children}
         </AuthContext.Provider>
     );

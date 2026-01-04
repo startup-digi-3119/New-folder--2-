@@ -21,7 +21,7 @@ import { useAuth } from '../../store/AuthContext';
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { openModal } = useUI();
+    const { } = useUI();
     const [realStats, setRealStats] = React.useState({
         steps: '0',
         calories: '0',
