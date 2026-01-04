@@ -136,7 +136,7 @@ const WorkoutPlanner: React.FC = () => {
             </section>
 
             {/* Blueprint Card */}
-            <Card className="bg-slate-900 text-white border-none !p-8 relative overflow-hidden min-h-[240px]">
+            <Card className="!bg-slate-900 text-white border-none !p-8 relative overflow-hidden min-h-[240px]">
                 <div className="relative z-10 space-y-6">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md">
