@@ -45,13 +45,17 @@ const WorkoutPlanner: React.FC = () => {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'AI request failed');
+                const errorMessage = typeof data.error === 'string'
+                    ? data.error
+                    : data.error?.message || JSON.stringify(data.error) || 'AI request failed';
+                throw new Error(errorMessage);
             }
 
             setAiResponse(data.choices[0].message.content);
         } catch (err: any) {
             console.error('AI Generation failed:', err);
-            setAiResponse(`Failed to connect to AI: ${err.message}. Please ensure your PERPLEXITY_API_KEY is configured in your Vercel Project Settings.`);
+            const displayError = err.message || 'Unknown error occurred';
+            setAiResponse(`Failed to connect to AI: ${displayError}. Please ensure your PERPLEXITY_API_KEY is configured in your Vercel Project Settings.`);
         } finally {
             setIsGenerating(false);
         }

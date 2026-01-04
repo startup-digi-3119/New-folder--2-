@@ -15,7 +15,12 @@ interface MainLayoutProps {
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const { activeModal, closeModal } = useUI();
-    const { user } = useAuth();
+    const { user, signOut } = useAuth();
+
+    const handleSignOut = async () => {
+        await signOut();
+        closeModal();
+    };
 
     // Form states
     const [title, setTitle] = useState('');
@@ -215,7 +220,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                             <p className="text-[10px] text-gray-500 font-bold uppercase">1 hour ago</p>
                         </div>
                     </div>
-                    <Button variant="ghost" fullWidth className="text-primary font-black uppercase italic tracking-widest text-xs">Mark all as read</Button>
+                    <Button variant="ghost" fullWidth onClick={closeModal} className="text-primary font-black uppercase italic tracking-widest text-xs">Mark all as read</Button>
                 </div>
             </Modal>
 
@@ -232,7 +237,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                         </button>
                     ))}
                     <div className="pt-4 mt-4 border-t border-gray-100">
-                        <Button variant="ghost" fullWidth className="text-red-500 font-black uppercase italic tracking-widest text-xs">Sign Out</Button>
+                        <Button variant="ghost" fullWidth onClick={handleSignOut} className="text-red-500 font-black uppercase italic tracking-widest text-xs">Sign Out</Button>
                     </div>
                 </div>
             </Modal>
@@ -260,7 +265,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                             <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1">Projects</p>
                         </div>
                     </div>
-                    <Button fullWidth className="mt-4">Edit Profile</Button>
+                    <Button fullWidth onClick={() => alert('Profile editing coming soon!')} className="mt-4">Edit Profile</Button>
                 </div>
             </Modal>
 
