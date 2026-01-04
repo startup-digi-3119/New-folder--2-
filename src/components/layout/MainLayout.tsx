@@ -588,8 +588,42 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                         ))}
                     </div>
 
-                    <div className="pt-4 border-t border-gray-100">
-                        <Button variant="ghost" fullWidth onClick={handleSignOut} className="text-red-500 font-black uppercase italic tracking-widest text-xs h-14">Sign Out</Button>
+                    <div className="pt-4 border-t border-gray-100 space-y-3">
+                        <div className="space-y-1">
+                            <h4 className="text-[10px] font-black text-red-400 uppercase tracking-widest ml-1">Danger Zone</h4>
+                            <Button
+                                variant="ghost"
+                                fullWidth
+                                onClick={async () => {
+                                    if (!window.confirm('WARNING: This will delete ALL your data (Projects, Tasks, Finances, Fitness History). This cannot be undone.')) return;
+                                    if (!window.confirm('Are you absolutely sure?')) return;
+
+                                    setLoading(true);
+                                    try {
+                                        await Promise.all([
+                                            neon.query('DELETE FROM transactions WHERE user_id = $1', [user?.id]),
+                                            neon.query('DELETE FROM tasks WHERE user_id = $1', [user?.id]),
+                                            neon.query('DELETE FROM projects WHERE user_id = $1', [user?.id]),
+                                            neon.query('DELETE FROM workouts WHERE user_id = $1', [user?.id]),
+                                            neon.query('DELETE FROM health_stats WHERE user_id = $1', [user?.id]),
+                                            neon.query('DELETE FROM notes WHERE user_id = $1', [user?.id]),
+                                            neon.query('DELETE FROM notifications WHERE user_id = $1', [user?.id]),
+                                        ]);
+                                        alert('All data has been reset to factory defaults.');
+                                        window.location.reload();
+                                    } catch (e) {
+                                        console.error(e);
+                                        alert('Failed to reset data');
+                                    } finally {
+                                        setLoading(false);
+                                    }
+                                }}
+                                className="bg-red-50 text-red-600 hover:bg-red-100 font-bold h-12 rounded-2xl"
+                            >
+                                Reset All Data (Factory Reset)
+                            </Button>
+                        </div>
+                        <Button variant="ghost" fullWidth onClick={handleSignOut} className="text-gray-400 hover:text-gray-600 font-black uppercase italic tracking-widest text-xs h-12">Sign Out</Button>
                     </div>
                 </div>
             </Modal>
