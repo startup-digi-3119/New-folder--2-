@@ -668,6 +668,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                         </select>
                     </div>
                     <div className="space-y-1">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Date</label>
+                        <input
+                            type="date"
+                            value={date}
+                            onChange={(e) => setDate(e.target.value)}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold text-xs"
+                            required
+                        />
+                    </div>
+                    <div className="space-y-1">
                         <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Description</label>
                         <input
                             type="text"
