@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
+import DateRangeSelector, { type DayRange } from '../../components/ui/DateRangeSelector';
 
 import { neon } from '../../services/neon';
 import { useAuth } from '../../store/AuthContext';
@@ -19,6 +20,7 @@ const FinancialDashboard: React.FC = () => {
     const [transactions, setTransactions] = React.useState<any[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [totals, setTotals] = React.useState({ balance: 0, income: 0, expense: 0 });
+    const [range, setRange] = React.useState<DayRange>('7days');
 
     const handleDeleteTransaction = async (id: number) => {
         if (!window.confirm('Delete this transaction?')) return;
@@ -46,9 +48,30 @@ const FinancialDashboard: React.FC = () => {
 
         const fetchTransactions = async () => {
             try {
-                const result = await neon.query('SELECT * FROM transactions WHERE user_id = $1', [user.id]);
+                let query = 'SELECT * FROM transactions WHERE user_id = $1';
+                const now = new Date();
+                let filterDate: Date | null = null;
+
+                switch (range) {
+                    case 'today': filterDate = new Date(now.setHours(0, 0, 0, 0)); break;
+                    case 'yesterday': filterDate = new Date(new Date(now.setDate(now.getDate() - 1)).setHours(0, 0, 0, 0)); break;
+                    case '3days': filterDate = new Date(now.setDate(now.getDate() - 3)); break;
+                    case '7days': filterDate = new Date(now.setDate(now.getDate() - 7)); break;
+                    case '30days': filterDate = new Date(now.setDate(now.getDate() - 30)); break;
+                    case '60days': filterDate = new Date(now.setDate(now.getDate() - 60)); break;
+                }
+
+                if (filterDate) {
+                    query += ` AND date >= '${filterDate.toISOString().split('T')[0]}'`;
+                    if (range === 'yesterday') {
+                        const endOfYesterday = new Date(filterDate);
+                        endOfYesterday.setHours(23, 59, 59, 999);
+                        query += ` AND date <= '${endOfYesterday.toISOString().split('T')[0]}'`;
+                    }
+                }
+
+                const result = await neon.query(query, [user.id]);
                 const data = result.rows;
-                // Sort locally by date descending
                 const sortedData = (data || []).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
                 setTransactions(sortedData);
 
@@ -74,7 +97,7 @@ const FinancialDashboard: React.FC = () => {
         };
 
         fetchTransactions();
-    }, [user]);
+    }, [user, range]);
     return (
         <div className="space-y-8 animate-in fade-in duration-700 pb-24">
             <header className="flex items-center justify-between">
@@ -86,6 +109,8 @@ const FinancialDashboard: React.FC = () => {
                     <Plus size={20} />
                 </Button>
             </header>
+
+            <DateRangeSelector value={range} onChange={setRange} />
 
             {/* Total Balance Card */}
             <Card className="!bg-slate-900 text-white border-none p-8 relative overflow-hidden">

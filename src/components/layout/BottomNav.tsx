@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Activity, Briefcase, Users, Plus } from 'lucide-react';
+import { Home, Activity, Briefcase, StickyNote, Plus } from 'lucide-react';
 import { useUI } from '../../store/UIContext';
 
 const BottomNav: React.FC = () => {
@@ -10,7 +10,7 @@ const BottomNav: React.FC = () => {
         { icon: <Activity size={24} />, label: 'Fitness', path: '/fitness' },
         { icon: null, label: '', path: '', isFab: true },
         { icon: <Briefcase size={24} />, label: 'Projects', path: '/projects' },
-        { icon: <Users size={24} />, label: 'Social', path: '/social' },
+        { icon: <StickyNote size={24} />, label: 'Notes', path: '/notes' },
     ];
 
     return (

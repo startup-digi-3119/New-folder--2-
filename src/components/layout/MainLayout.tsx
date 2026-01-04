@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
-import { Bell } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+    Bell,
+    Camera
+} from 'lucide-react';
 import Header from './Header';
 import BottomNav from './BottomNav';
 import MobileSidebar from './MobileSidebar';
@@ -14,38 +17,62 @@ interface MainLayoutProps {
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
+    const [loading, setLoading] = useState(false);
+    const [profile, setProfile] = useState<any>(null);
+    const [notifications, setNotifications] = useState<any[]>([]);
+    const [fullName, setFullName] = useState('');
+    const [bio, setBio] = useState('');
+    const [photoUrl, setPhotoUrl] = useState('');
+    const [newPassword, setNewPassword] = useState('');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const { activeModal, closeModal } = useUI();
-    const { user, signOut } = useAuth();
+    const { user, signOut, updatePassword } = useAuth();
+
+    // Form states
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [type, setType] = useState<'expense' | 'income'>('expense');
+    const [amount, setAmount] = useState('');
+    const [category, setCategory] = useState('General');
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [time, setTime] = useState('09:00');
+    const [stepsValue, setStepsValue] = useState('');
+    const [sleepValue, setSleepValue] = useState('');
+    const [foodValue, setFoodValue] = useState('');
+    const [foodCalories, setFoodCalories] = useState('');
+    const [assignedTo, setAssignedTo] = useState('');
+    const [projectId, setProjectId] = useState<string | null>(null);
+    const [projects, setProjects] = useState<any[]>([]);
 
     const handleSignOut = async () => {
         await signOut();
         closeModal();
     };
 
-    // Form states
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [amount, setAmount] = useState('');
-    const [type, setType] = useState<'income' | 'expense'>('expense');
-    const [category, setCategory] = useState('General');
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [time, setTime] = useState('09:00');
-    const [postContent, setPostContent] = useState('');
-    const [postImage, setPostImage] = useState<string | null>(null);
-    const [postLocation, setPostLocation] = useState<string | null>(null);
-    const [assignedTo, setAssignedTo] = useState('');
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [projects, setProjects] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
-
-    React.useEffect(() => {
+    // Fetch initial data
+    useEffect(() => {
         if (!user) return;
-        const fetchProjects = async () => {
-            const { data } = await neon.from('projects').select();
-            setProjects(data || []);
+        const fetchData = async () => {
+            const projRes = await neon.from('projects').select();
+            setProjects(projRes.data || []);
+
+            const profRes = await neon.from('profiles').select('*');
+            if (profRes.data) {
+                const userProf = profRes.data.find((p: any) => p.user_id === user.id);
+                if (userProf) {
+                    setProfile(userProf);
+                    setFullName(userProf.full_name || '');
+                    setBio(userProf.bio || '');
+                    setPhotoUrl(userProf.photo_url || '');
+                }
+            }
+
+            const notifRes = await neon.from('notifications').select('*');
+            if (notifRes.data) {
+                setNotifications(notifRes.data.filter((n: any) => n.user_id === user.id));
+            }
         };
-        fetchProjects();
+        fetchData();
     }, [user, activeModal]);
 
     const handleCreateProject = async (e: React.FormEvent) => {
@@ -63,9 +90,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             closeModal();
             setTitle('');
             setDescription('');
-            window.location.reload(); // Quick refresh to show new data
-        } catch (err) {
-            console.error('Error creating project:', err);
+            window.location.reload();
+        } catch (err: any) {
+            console.error('Error:', err);
+            alert(err.message);
         } finally {
             setLoading(false);
         }
@@ -81,7 +109,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 project_id: projectId ? Number(projectId) : null,
                 title,
                 description,
-                assigned_to: assignedTo,
+                assigned_to: assignedTo || null,
                 status: 'todo',
                 priority: 'medium',
                 due_date: date ? `${date}T${time}:00` : null
@@ -94,8 +122,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             setProjectId(null);
             window.location.reload();
         } catch (err: any) {
-            console.error('Error creating task:', err);
-            alert(`Failed: ${err.message}`);
+            console.error('Error:', err);
+            alert(err.message);
         } finally {
             setLoading(false);
         }
@@ -120,34 +148,148 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             setTitle('');
             window.location.reload();
         } catch (err: any) {
-            console.error('Error creating transaction:', err);
-            alert(`Failed to add transaction: ${err.message || 'Unknown error'}`);
+            console.error('Error:', err);
+            alert(err.message);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleCreateEvent = async (e: React.FormEvent) => {
+    const handleCreateSteps = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user) return;
         setLoading(true);
         try {
-            // We'll treat calendar events as tasks for now or just log them
-            const { error } = await neon.from('tasks').insert({
+            const today = new Date().toISOString().split('T')[0];
+            const { error } = await neon.from('health_stats').insert({
                 user_id: user.id,
-                title,
-                description: `Event: ${description}`,
-                status: 'todo',
-                priority: 'high',
-                due_date: `${date}T${time}:00`
+                date: today,
+                steps: Number(stepsValue)
             });
-            if (error) throw error;
+            if (error && error.message.includes('unique constraint')) {
+                await neon.from('health_stats').update({ steps: Number(stepsValue) }).match({ user_id: user.id, date: today });
+            } else if (error) throw error;
             closeModal();
-            setTitle('');
-            setDescription('');
+            setStepsValue('');
             window.location.reload();
-        } catch (err) {
-            console.error('Error creating event:', err);
+        } catch (err: any) {
+            console.error('Error:', err);
+            alert(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCreateSleep = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user) return;
+        setLoading(true);
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            const { error } = await neon.from('health_stats').insert({
+                user_id: user.id,
+                date: today,
+                sleep_minutes: Number(sleepValue)
+            });
+            if (error && error.message.includes('unique constraint')) {
+                await neon.from('health_stats').update({ sleep_minutes: Number(sleepValue) }).match({ user_id: user.id, date: today });
+            } else if (error) throw error;
+            closeModal();
+            setSleepValue('');
+            window.location.reload();
+        } catch (err: any) {
+            console.error('Error:', err);
+            alert(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCreateFood = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user) return;
+        setLoading(true);
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            const { error } = await neon.from('health_stats').insert({
+                user_id: user.id,
+                date: today,
+                calories_consumed: Number(foodCalories)
+            });
+            if (error && error.message.includes('unique constraint')) {
+                const existing = await neon.query('SELECT calories_consumed FROM health_stats WHERE user_id = $1 AND date = $2', [user.id, today]);
+                const newTotal = (existing.rows[0]?.calories_consumed || 0) + Number(foodCalories);
+                await neon.from('health_stats').update({ calories_consumed: newTotal }).match({ user_id: user.id, date: today });
+            } else if (error) throw error;
+            closeModal();
+            setFoodValue('');
+            setFoodCalories('');
+            window.location.reload();
+        } catch (err: any) {
+            console.error('Error:', err);
+            alert(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUpdateProfile = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user) return;
+        setLoading(true);
+        try {
+            const { error: insertError } = await neon.from('profiles').insert({
+                user_id: user.id,
+                full_name: fullName,
+                photo_url: photoUrl,
+                bio: bio
+            });
+            if (insertError) {
+                await neon.from('profiles').update({
+                    full_name: fullName,
+                    photo_url: photoUrl,
+                    bio: bio
+                }).match({ user_id: user.id });
+            }
+            closeModal();
+            window.location.reload();
+        } catch (err: any) {
+            console.error('Error:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handlePhotoUpload = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = (e: any) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (re) => setPhotoUrl(re.target?.result as string);
+                reader.readAsDataURL(file);
+            }
+        };
+        input.click();
+    };
+
+    const handleUpdatePassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newPassword) return;
+        setLoading(true);
+        try {
+            if (updatePassword) {
+                await updatePassword(newPassword);
+                alert('Password updated successfully!');
+            } else {
+                alert('Password update feature coming soon!');
+            }
+            setNewPassword('');
+            closeModal();
+        } catch (err: any) {
+            alert(`Failed: ${err.message}`);
         } finally {
             setLoading(false);
         }
@@ -170,53 +312,36 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             setDescription('');
             window.location.reload();
         } catch (err: any) {
-            console.error('Error creating note:', err);
-            alert(`Failed to save note: ${err.message}`);
+            console.error('Error:', err);
+            alert(err.message);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleCreatePost = async (e: React.FormEvent) => {
+    const handleCreateEvent = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user) return;
         setLoading(true);
         try {
-            const { error } = await neon.from('posts').insert({
+            const { error } = await neon.from('tasks').insert({
                 user_id: user.id,
-                content: postContent,
-                image: postImage,
-                location: postLocation,
-                type: 'Update',
-                likes: 0,
-                comments: 0
+                title,
+                description: `Event: ${description}`,
+                status: 'todo',
+                priority: 'high',
+                due_date: `${date}T${time}:00`
             });
             if (error) throw error;
             closeModal();
-            setPostContent('');
-            setPostImage(null);
-            setPostLocation(null);
+            setTitle('');
+            setDescription('');
             window.location.reload();
         } catch (err: any) {
-            console.error('Error creating post:', err);
-            alert(`Failed to create post: ${err.message}`);
+            console.error('Error:', err);
+            alert(err.message);
         } finally {
             setLoading(false);
-        }
-    };
-
-    const handleSelectImage = () => {
-        const url = window.prompt("Enter image URL (mocking file upload for PWA):");
-        if (url) setPostImage(url);
-    };
-
-    const handleGetLocation = () => {
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition((position) => {
-                setPostLocation(`${position.coords.latitude.toFixed(2)}, ${position.coords.longitude.toFixed(2)}`);
-            });
-        } else {
-            alert("Geolocation not supported");
         }
     };
 
@@ -337,10 +462,31 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 onClose={closeModal}
                 title="Notifications"
             >
-                <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
-                    <Bell size={48} className="text-gray-100" />
-                    <p className="text-sm font-bold text-gray-400 italic">No new notifications</p>
-                    <Button variant="ghost" fullWidth onClick={closeModal} className="text-primary font-black uppercase italic tracking-widest text-xs">Close</Button>
+                <div className="space-y-2 max-h-[60vh] overflow-y-auto no-scrollbar py-2">
+                    {notifications.length > 0 ? (
+                        notifications.map((notif) => (
+                            <div key={notif.id} className={`p-4 rounded-3xl border border-gray-100 transition-all ${notif.read ? 'bg-white opacity-60' : 'bg-primary/5 border-primary/10'}`}>
+                                <div className="flex items-start gap-3">
+                                    <div className="mt-1">
+                                        <Bell size={16} className={notif.read ? 'text-gray-400' : 'text-primary'} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h5 className="font-bold text-gray-900 leading-tight">{notif.title}</h5>
+                                        <p className="text-xs text-gray-500 font-medium">{notif.message}</p>
+                                        <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">
+                                            {new Date(notif.created_at).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
+                            <Bell size={48} className="text-gray-100" />
+                            <p className="text-sm font-bold text-gray-400 italic">No new notifications</p>
+                        </div>
+                    )}
+                    <Button variant="ghost" fullWidth onClick={closeModal} className="text-primary font-black uppercase italic tracking-widest text-xs h-14">Close</Button>
                 </div>
             </Modal>
 
@@ -349,19 +495,41 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 onClose={closeModal}
                 title="Settings"
             >
-                <div className="space-y-2 py-2">
-                    {['Account Security', 'Notification Prefs', 'Theme & Appearance', 'Connected Devices'].map(item => (
-                        <button
-                            key={item}
-                            onClick={() => alert(`${item} is coming soon in the next update!`)}
-                            className="w-full p-4 flex items-center justify-between hover:bg-slate-50 rounded-2xl transition-colors group"
-                        >
-                            <span className="font-bold text-gray-700">{item}</span>
-                            <span className="text-gray-300 group-hover:translate-x-1 transition-transform">→</span>
-                        </button>
-                    ))}
-                    <div className="pt-4 mt-4 border-t border-gray-100">
-                        <Button variant="ghost" fullWidth onClick={handleSignOut} className="text-red-500 font-black uppercase italic tracking-widest text-xs">Sign Out</Button>
+                <div className="space-y-4 py-2">
+                    <div className="p-4 bg-slate-50 rounded-3xl border border-gray-100 text-center">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Logged in as</p>
+                        <p className="font-bold text-gray-900">{user?.email}</p>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Change Password</label>
+                        <form onSubmit={handleUpdatePassword} className="flex gap-2">
+                            <input
+                                type="password"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                placeholder="New Password"
+                                className="flex-1 bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 focus:ring-2 focus:ring-primary/20 outline-none font-bold text-sm"
+                            />
+                            <Button type="submit" size="sm" disabled={loading || !newPassword}>Update</Button>
+                        </form>
+                    </div>
+
+                    <div className="pt-2 space-y-2">
+                        {['Notification Prefs', 'Theme & Appearance', 'Connected Devices'].map(item => (
+                            <button
+                                key={item}
+                                onClick={() => alert(`${item} is coming soon!`)}
+                                className="w-full p-4 flex items-center justify-between hover:bg-slate-50 rounded-2xl transition-colors group border border-gray-50"
+                            >
+                                <span className="font-bold text-sm text-gray-700">{item}</span>
+                                <span className="text-gray-300 group-hover:translate-x-1 transition-transform">→</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="pt-4 border-t border-gray-100">
+                        <Button variant="ghost" fullWidth onClick={handleSignOut} className="text-red-500 font-black uppercase italic tracking-widest text-xs h-14">Sign Out</Button>
                     </div>
                 </div>
             </Modal>
@@ -371,29 +539,53 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 onClose={closeModal}
                 title="User Profile"
             >
-                <div className="text-center py-6 space-y-4">
-                    <div className="w-24 h-24 bg-primary/10 rounded-full mx-auto flex items-center justify-center text-3xl font-black text-primary italic border-4 border-white shadow-xl">
-                        {user?.email?.substring(0, 2).toUpperCase() || 'JD'}
-                    </div>
-                    <div>
-                        <h4 className="text-xl font-black text-gray-900 tracking-tighter italic">{user?.email?.split('@')[0]}</h4>
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest leading-tight">{user?.email}</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3 pt-4">
-                        <div className="p-4 bg-slate-50 rounded-3xl border border-gray-100">
-                            <p className="text-2xl font-black text-primary italic leading-none">0</p>
-                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1">Workouts</p>
+                <form onSubmit={handleUpdateProfile} className="space-y-6 pt-2 pb-4">
+                    <div className="relative w-32 h-32 mx-auto">
+                        <div className="w-full h-full rounded-full overflow-hidden bg-primary/10 border-4 border-white shadow-2xl flex items-center justify-center">
+                            {photoUrl ? (
+                                <img src={photoUrl} alt="Profile" className="w-full h-full object-cover" />
+                            ) : (
+                                <span className="text-4xl font-black text-primary italic uppercase">{user?.email?.[0]}</span>
+                            )}
                         </div>
-                        <div className="p-4 bg-slate-50 rounded-3xl border border-gray-100">
-                            <p className="text-2xl font-black text-emerald-500 italic leading-none">0</p>
-                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1">Projects</p>
+                        <button
+                            type="button"
+                            onClick={handlePhotoUpload}
+                            className="absolute bottom-0 right-0 p-2 bg-primary text-white rounded-full border-4 border-white shadow-lg hover:scale-110 transition-transform"
+                        >
+                            <Camera size={18} />
+                        </button>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
+                            <input
+                                type="text"
+                                value={fullName}
+                                onChange={(e) => setFullName(e.target.value)}
+                                placeholder="Edit Name"
+                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Bio / Status</label>
+                            <textarea
+                                value={bio}
+                                onChange={(e) => setBio(e.target.value)}
+                                placeholder="Tell us about yourself..."
+                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-medium h-24 resize-none"
+                            />
                         </div>
                     </div>
-                    <div className="pt-4 mt-2 border-t border-gray-100">
-                        <Button fullWidth onClick={() => alert('Profile editing coming soon!')} className="mb-2">Edit Profile</Button>
-                        <Button variant="ghost" fullWidth onClick={handleSignOut} className="text-red-500 font-black uppercase italic tracking-widest text-xs h-12">Sign Out</Button>
+
+                    <div className="pt-2">
+                        <Button type="submit" fullWidth disabled={loading}>
+                            {loading ? 'Updating...' : 'Save Profile Changes'}
+                        </Button>
+                        <Button variant="ghost" fullWidth onClick={handleSignOut} className="text-red-500 font-black uppercase italic tracking-widest text-xs h-12 mt-2">Sign Out</Button>
                     </div>
-                </div>
+                </form>
             </Modal>
 
             <Modal
@@ -436,7 +628,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                             onChange={(e) => setCategory(e.target.value)}
                             className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold"
                         >
-                            {['General', 'Food', 'Transport', 'Entertainment', 'Shopping', 'Health', 'Investment'].map(cat => (
+                            {(type === 'income'
+                                ? ['Salary', 'HM', 'Business', 'Loan', 'Freelance']
+                                : ['Food', 'Transport', 'Rent', 'Shopping', 'Health', 'Investment', 'Other']
+                            ).map(cat => (
                                 <option key={cat} value={cat}>{cat}</option>
                             ))}
                         </select>
@@ -481,7 +676,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                             type="date"
                             value={date}
                             onChange={(e) => setDate(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold"
+                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold text-xs"
                             required
                         />
                     </div>
@@ -491,52 +686,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                             type="time"
                             value={time}
                             onChange={(e) => setTime(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold"
+                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold text-xs"
                             required
                         />
                     </div>
                     <Button type="submit" fullWidth disabled={loading}>
                         {loading ? 'Scheduling...' : 'Set Reminder'}
-                    </Button>
-                </form>
-            </Modal>
-
-            <Modal
-                isOpen={activeModal === 'post'}
-                onClose={closeModal}
-                title="Create Post"
-            >
-                <form onSubmit={handleCreatePost} className="space-y-4">
-                    <div className="flex items-center gap-3 p-1">
-                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-black italic">
-                            {user?.email?.substring(0, 2).toUpperCase() || 'JD'}
-                        </div>
-                        <span className="font-bold text-gray-900">{user?.email?.split('@')[0]}</span>
-                    </div>
-                    <textarea
-                        value={postContent}
-                        onChange={(e) => setPostContent(e.target.value)}
-                        placeholder="What's on your mind? Share your progress..."
-                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-medium h-40 resize-none"
-                        required
-                    />
-                    {postImage && (
-                        <div className="relative rounded-2xl overflow-hidden aspect-video bg-gray-100">
-                            <img src={postImage} alt="Post preview" className="w-full h-full object-cover" />
-                            <button onClick={() => setPostImage(null)} className="absolute top-2 right-2 bg-black/50 text-white p-1 rounded-full">✕</button>
-                        </div>
-                    )}
-                    {postLocation && (
-                        <div className="text-[10px] font-black uppercase text-primary bg-primary/5 p-2 rounded-xl inline-block px-3 italic tracking-widest">
-                            📍 {postLocation}
-                        </div>
-                    )}
-                    <div className="flex gap-2">
-                        <Button type="button" onClick={handleSelectImage} variant="ghost" className="flex-1 bg-gray-50 text-gray-400 text-xs">📷 Add Photo</Button>
-                        <Button type="button" onClick={handleGetLocation} variant="ghost" className="flex-1 bg-gray-50 text-gray-400 text-xs">📍 Location</Button>
-                    </div>
-                    <Button type="submit" fullWidth disabled={loading}>
-                        {loading ? 'Posting...' : 'Post to Feed'}
                     </Button>
                 </form>
             </Modal>
@@ -570,6 +725,87 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     </div>
                     <Button type="submit" fullWidth disabled={loading}>
                         {loading ? 'Saving...' : 'Save Note'}
+                    </Button>
+                </form>
+            </Modal>
+
+            <Modal
+                isOpen={activeModal === 'steps'}
+                onClose={closeModal}
+                title="Record Steps"
+            >
+                <form onSubmit={handleCreateSteps} className="space-y-4">
+                    <div className="space-y-1">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Total Steps Today</label>
+                        <input
+                            type="number"
+                            value={stepsValue}
+                            onChange={(e) => setStepsValue(e.target.value)}
+                            placeholder="e.g., 10000"
+                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold text-2xl"
+                            required
+                        />
+                    </div>
+                    <Button type="submit" fullWidth disabled={loading}>
+                        {loading ? 'Recording...' : 'Update Steps'}
+                    </Button>
+                </form>
+            </Modal>
+
+            <Modal
+                isOpen={activeModal === 'sleep'}
+                onClose={closeModal}
+                title="Record Sleep"
+            >
+                <form onSubmit={handleCreateSleep} className="space-y-4">
+                    <div className="space-y-1">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Sleep Duration (Minutes)</label>
+                        <input
+                            type="number"
+                            value={sleepValue}
+                            onChange={(e) => setSleepValue(e.target.value)}
+                            placeholder="e.g., 480"
+                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold text-2xl"
+                            required
+                        />
+                        <p className="text-[10px] text-gray-400 mt-1 ml-1 font-medium">8 hours = 480 mins</p>
+                    </div>
+                    <Button type="submit" fullWidth disabled={loading}>
+                        {loading ? 'Recording...' : 'Update Sleep'}
+                    </Button>
+                </form>
+            </Modal>
+
+            <Modal
+                isOpen={activeModal === 'food'}
+                onClose={closeModal}
+                title="Log Food"
+            >
+                <form onSubmit={handleCreateFood} className="space-y-4">
+                    <div className="space-y-1">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Item Description</label>
+                        <input
+                            type="text"
+                            value={foodValue}
+                            onChange={(e) => setFoodValue(e.target.value)}
+                            placeholder="e.g., Chicken Salad"
+                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold"
+                            required
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Estimated Calories (kcal)</label>
+                        <input
+                            type="number"
+                            value={foodCalories}
+                            onChange={(e) => setFoodCalories(e.target.value)}
+                            placeholder="e.g., 350"
+                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold text-2xl"
+                            required
+                        />
+                    </div>
+                    <Button type="submit" fullWidth disabled={loading}>
+                        {loading ? 'Logging...' : 'Add Food'}
                     </Button>
                 </form>
             </Modal>

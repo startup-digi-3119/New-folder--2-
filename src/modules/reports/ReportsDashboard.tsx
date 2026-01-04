@@ -14,27 +14,45 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { neon } from '../../services/neon';
 import { useAuth } from '../../store/AuthContext';
+import DateRangeSelector, { type DayRange } from '../../components/ui/DateRangeSelector';
 
 const ReportsDashboard: React.FC = () => {
     const { user } = useAuth();
     const [financeStats, setFinanceStats] = useState({ income: 0, expenses: 0, balance: 0 });
     const [fitnessStats, setFitnessStats] = useState({ totalWorkouts: 0, avgCalories: 0, totalTime: 0 });
     const [activeTab, setActiveTab] = useState<'finance' | 'fitness'>('finance');
+    const [range, setRange] = useState<DayRange>('7days');
 
     useEffect(() => {
         if (!user) return;
 
         const fetchStats = async () => {
             try {
+                const now = new Date();
+                let filterDate: Date | null = null;
+                switch (range) {
+                    case 'today': filterDate = new Date(now.setHours(0, 0, 0, 0)); break;
+                    case 'yesterday': filterDate = new Date(new Date(now.setDate(now.getDate() - 1)).setHours(0, 0, 0, 0)); break;
+                    case '3days': filterDate = new Date(now.setDate(now.getDate() - 3)); break;
+                    case '7days': filterDate = new Date(now.setDate(now.getDate() - 7)); break;
+                    case '30days': filterDate = new Date(now.setDate(now.getDate() - 30)); break;
+                    case '60days': filterDate = new Date(now.setDate(now.getDate() - 60)); break;
+                }
+                const filterStr = filterDate ? filterDate.toISOString().split('T')[0] : '';
+
                 // Finance Stats
-                const transResult = await neon.query('SELECT * FROM transactions WHERE user_id = $1', [user.id]);
+                let transQuery = 'SELECT * FROM transactions WHERE user_id = $1';
+                if (filterStr) transQuery += ` AND date >= '${filterStr}'`;
+                const transResult = await neon.query(transQuery, [user.id]);
                 const trans = transResult.rows;
                 const income = trans.filter((t: any) => t.type === 'income').reduce((acc: number, t: any) => acc + Number(t.amount), 0);
                 const expenses = trans.filter((t: any) => t.type === 'expense').reduce((acc: number, t: any) => acc + Number(t.amount), 0);
                 setFinanceStats({ income, expenses, balance: income - expenses });
 
                 // Fitness Stats
-                const workoutResult = await neon.query('SELECT * FROM workouts WHERE user_id = $1', [user.id]);
+                let workoutQuery = 'SELECT * FROM workouts WHERE user_id = $1';
+                if (filterStr) workoutQuery += ` AND created_at::date >= '${filterStr}'`;
+                const workoutResult = await neon.query(workoutQuery, [user.id]);
                 const workouts = workoutResult.rows;
                 const totalWorkouts = workouts.length;
                 const totalCalories = workouts.reduce((acc: number, w: any) => acc + (w.calories_burned || 0), 0);
@@ -51,7 +69,7 @@ const ReportsDashboard: React.FC = () => {
         };
 
         fetchStats();
-    }, [user]);
+    }, [user, range]);
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-24">
@@ -75,6 +93,8 @@ const ReportsDashboard: React.FC = () => {
                     </button>
                 </div>
             </header>
+
+            <DateRangeSelector value={range} onChange={setRange} />
 
             {activeTab === 'finance' ? (
                 <div className="space-y-6">

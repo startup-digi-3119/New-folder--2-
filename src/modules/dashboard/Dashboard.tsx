@@ -12,6 +12,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
+import DateRangeSelector, { type DayRange } from '../../components/ui/DateRangeSelector';
+import { useUI } from '../../store/UIContext';
 
 import { neon } from '../../services/neon';
 import { useAuth } from '../../store/AuthContext';
@@ -19,12 +21,15 @@ import { useAuth } from '../../store/AuthContext';
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { openModal } = useUI();
     const [realStats, setRealStats] = React.useState({
         steps: '0',
         calories: '0',
         tasks: '0',
-        balance: '₹0'
+        balance: '₹0',
+        sleep: '0h 0m'
     });
+    const [range, setRange] = React.useState<DayRange>('today');
     const [pendingTask, setPendingTask] = React.useState<any>(null);
 
     React.useEffect(() => {
@@ -32,44 +37,66 @@ const Dashboard: React.FC = () => {
 
         const fetchDashboardData = async () => {
             try {
-                // Fetch today's calories from workouts
-                const today = new Date().toISOString().split('T')[0];
-                const workoutRes = await neon.query('SELECT SUM(calories_burned) as total FROM workouts WHERE user_id = $1 AND created_at::date = $2', [user.id, today]);
+                const now = new Date();
+                let filterDate: Date | null = null;
+                switch (range) {
+                    case 'today': filterDate = new Date(now.setHours(0, 0, 0, 0)); break;
+                    case 'yesterday': filterDate = new Date(new Date(now.setDate(now.getDate() - 1)).setHours(0, 0, 0, 0)); break;
+                    case '3days': filterDate = new Date(now.setDate(now.getDate() - 3)); break;
+                    case '7days': filterDate = new Date(now.setDate(now.getDate() - 7)); break;
+                    case '30days': filterDate = new Date(now.setDate(now.getDate() - 30)); break;
+                    case '60days': filterDate = new Date(now.setDate(now.getDate() - 60)); break;
+                }
+                const filterStr = filterDate ? filterDate.toISOString().split('T')[0] : '';
+
+                // 1. Calories from workouts
+                let calorieQuery = 'SELECT SUM(calories_burned) as total FROM workouts WHERE user_id = $1';
+                if (filterStr) calorieQuery += ` AND created_at::date >= '${filterStr}'`;
+                const workoutRes = await neon.query(calorieQuery, [user.id]);
                 const calories = workoutRes.rows[0]?.total || 0;
 
-                // Fetch active tasks count
-                const taskRes = await neon.query('SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND status != $2', [user.id, 'done']);
-                const activeTasks = taskRes.rows[0]?.count || 0;
+                // 2. Health Stats (Steps, Sleep, Consumed)
+                let healthQuery = 'SELECT SUM(steps) as steps, SUM(sleep_minutes) as sleep, SUM(calories_consumed) as consumed FROM health_stats WHERE user_id = $1';
+                if (filterStr) healthQuery += ` AND date >= '${filterStr}'`;
+                const healthRes = await neon.query(healthQuery, [user.id]);
+                const hStats = healthRes.rows[0] || { steps: 0, sleep: 0, consumed: 0 };
 
-                // Fetch balance
+                // 3. Active Tasks
+                const taskRes = await neon.query('SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND status != $2', [user.id, 'done']);
+
+                // 4. Financial Balance
                 const transRes = await neon.query('SELECT * FROM transactions WHERE user_id = $1', [user.id]);
                 const trans = transRes.rows;
                 const income = trans.filter((t: any) => t.type === 'income').reduce((acc: number, t: any) => acc + Number(t.amount), 0);
                 const expense = trans.filter((t: any) => t.type === 'expense').reduce((acc: number, t: any) => acc + Number(t.amount), 0);
 
-                // Fetch latest pending task
+                // 5. Latest Pending Task
                 const pendingRes = await neon.query('SELECT * FROM tasks WHERE user_id = $1 AND status != $2 ORDER BY created_at DESC LIMIT 1', [user.id, 'done']);
                 setPendingTask(pendingRes.rows[0]);
 
+                const sleepHrs = Math.floor(hStats.sleep / 60);
+                const sleepMins = hStats.sleep % 60;
+
                 setRealStats({
-                    steps: '0', // No sensor data yet
-                    calories: calories.toString(),
-                    tasks: activeTasks.toString(),
-                    balance: `₹${(income - expense).toLocaleString()}`
+                    steps: (hStats.steps || 0).toLocaleString(),
+                    calories: (Number(calories) + Number(hStats.consumed || 0)).toString(),
+                    tasks: taskRes.rows[0]?.count.toString() || '0',
+                    balance: `₹${(income - expense).toLocaleString()}`,
+                    sleep: `${sleepHrs}h ${sleepMins}m`
                 });
             } catch (err) {
-                console.error('Error fetching dashboard data:', err);
+                console.error('Error:', err);
             }
         };
 
         fetchDashboardData();
-    }, [user]);
+    }, [user, range]);
 
     const stats = [
-        { label: 'Today\'s Calories', value: realStats.calories, icon: <Flame className="text-orange-500" />, trend: '+5%', color: 'bg-orange-500/10' },
-        { label: 'Active Tasks', value: realStats.tasks, icon: <Activity className="text-primary" />, trend: 'Target: 5', color: 'bg-primary/10' },
-        { label: 'Steps', value: realStats.steps, icon: <Footprints className="text-emerald-500" />, trend: '12%', color: 'bg-emerald-500/10' },
-        { label: 'Sleep', value: '7h 20m', icon: <Moon className="text-secondary" />, trend: 'Good', color: 'bg-secondary/10' },
+        { id: 'food', label: range === 'today' ? 'Today\'s Calories' : 'Calories', value: realStats.calories, icon: <Flame className="text-orange-500" />, color: 'bg-orange-500/10' },
+        { id: 'task', label: 'Active Tasks', value: realStats.tasks, icon: <Activity className="text-primary" />, color: 'bg-primary/10' },
+        { id: 'steps', label: 'Steps', value: realStats.steps, icon: <Footprints className="text-emerald-500" />, color: 'bg-emerald-500/10' },
+        { id: 'sleep', label: 'Sleep', value: realStats.sleep, icon: <Moon className="text-secondary" />, color: 'bg-secondary/10' },
     ];
 
     return (
@@ -92,17 +119,19 @@ const Dashboard: React.FC = () => {
                 </Button>
             </section>
 
+            <DateRangeSelector value={range} onChange={setRange} />
+
             {/* Quick Stats Grid */}
             <section className="grid grid-cols-2 gap-4">
                 {stats.map((stat, i) => (
-                    <Card key={i} className="flex flex-col gap-3">
+                    <Card key={i} className="flex flex-col gap-3 group relative overflow-hidden transition-all hover:scale-[1.02] active:scale-95 cursor-pointer">
                         <div className="flex items-center justify-between">
                             <div className={`p-2 rounded-xl ${stat.color}`}>
                                 {stat.icon}
                             </div>
-                            <span className="text-xs font-bold text-gray-400">
-                                {stat.trend}
-                            </span>
+                            <div className="p-1.5 bg-gray-50 rounded-lg group-hover:bg-primary/10 transition-colors">
+                                <Plus size={14} className="text-gray-300 group-hover:text-primary" />
+                            </div>
                         </div>
                         <div>
                             <p className="text-2xl font-black text-gray-900">{stat.value}</p>

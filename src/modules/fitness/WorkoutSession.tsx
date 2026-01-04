@@ -135,7 +135,7 @@ const WorkoutSession: React.FC = () => {
         try {
             const { error } = await neon.from('workouts').insert({
                 user_id: user.id,
-                name: currentDay?.title || `Workout Session`,
+                name: `${id}`, // Save with full ID (week-phase-day) to prevent collisions
                 duration_seconds: seconds,
                 calories_burned: parseInt(calories),
                 average_hr: 0,

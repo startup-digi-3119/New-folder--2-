@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 
-type ModalType = 'project' | 'task' | 'transaction' | 'event' | 'notifications' | 'settings' | 'profile' | 'post' | 'note' | null;
+type ModalType = 'project' | 'task' | 'transaction' | 'event' | 'notifications' | 'settings' | 'profile' | 'post' | 'note' | 'steps' | 'sleep' | 'food' | null;
 
 interface UIContextType {
     activeModal: ModalType;

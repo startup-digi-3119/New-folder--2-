@@ -37,7 +37,7 @@ const WorkoutPlanner: React.FC = () => {
         fetchCompleted();
     }, [user]);
 
-    const isCompleted = (title: string) => completedWorkoutTitles.includes(title);
+    const isCompleted = (id: string) => completedWorkoutTitles.includes(id);
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-24">
@@ -93,10 +93,10 @@ const WorkoutPlanner: React.FC = () => {
                             onClick={() => setExpandedDay(expandedDay === day.day ? null : day.day)}
                         >
                             <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg italic ${isCompleted(day.title) ? 'bg-emerald-500 text-white' :
-                                        day.title.includes('Rest') ? 'bg-emerald-50 text-emerald-500' : 'bg-primary/10 text-primary'
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg italic ${isCompleted(`${selectedPhase.id}-${day.day}`) ? 'bg-emerald-500 text-white' :
+                                    day.title.includes('Rest') ? 'bg-emerald-50 text-emerald-500' : 'bg-primary/10 text-primary'
                                     }`}>
-                                    {isCompleted(day.title) ? <CheckCircle2 size={24} /> : day.day}
+                                    {isCompleted(`${selectedPhase.id}-${day.day}`) ? <CheckCircle2 size={24} /> : day.day}
                                 </div>
                                 <div>
                                     <h4 className="font-bold text-gray-900">{day.title}</h4>

@@ -8,7 +8,6 @@ import WorkoutPlanner from './modules/fitness/WorkoutPlanner';
 import ProjectsDashboard from './modules/projects/ProjectsDashboard';
 import ProjectBoard from './modules/projects/ProjectBoard';
 import PerformanceAnalytics from './modules/projects/PerformanceAnalytics';
-import SocialFeed from './modules/social/SocialFeed';
 import FinancialDashboard from './modules/finance/FinancialDashboard';
 import AddTransaction from './modules/finance/AddTransaction';
 import CalendarView from './modules/calendar/CalendarView';
@@ -53,7 +52,6 @@ function App() {
                     <Route path="/projects" element={<ProjectsDashboard />} />
                     <Route path="/projects/analytics" element={<PerformanceAnalytics />} />
                     <Route path="/projects/:id" element={<ProjectBoard />} />
-                    <Route path="/social" element={<SocialFeed />} />
                     <Route path="/finance" element={<FinancialDashboard />} />
                     <Route path="/finance/add" element={<AddTransaction />} />
                     <Route path="/calendar" element={<CalendarView />} />
