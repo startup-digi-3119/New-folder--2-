@@ -27,13 +27,20 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     const { activeModal, closeModal } = useUI();
     const { user, signOut, updatePassword } = useAuth();
 
+    // Helper for local date string (YYYY-MM-DD)
+    const getLocalDate = () => {
+        const now = new Date();
+        const offset = now.getTimezoneOffset() * 60000;
+        return new Date(now.getTime() - offset).toISOString().split('T')[0];
+    };
+
     // Form states
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [type, setType] = useState<'expense' | 'income'>('expense');
     const [amount, setAmount] = useState('');
     const [category, setCategory] = useState('General');
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [date, setDate] = useState(getLocalDate());
     const [time, setTime] = useState('09:00');
     const [stepsValue, setStepsValue] = useState('');
     const [sleepValue, setSleepValue] = useState('');
@@ -50,25 +57,33 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     };
 
     // Fetch initial data
+    // Fetch initial data
     useEffect(() => {
         if (!user) return;
         const fetchData = async () => {
-            const projRes = await neon.from('projects').select();
-            setProjects(projRes.data || []);
+            try {
+                const [projRes, profRes, notifRes] = await Promise.all([
+                    neon.query('SELECT * FROM projects WHERE user_id = $1', [user.id]),
+                    neon.from('profiles').select('*'),
+                    neon.from('notifications').select('*')
+                ]);
 
-            const profRes = await neon.from('profiles').select('*');
-            if (profRes.data) {
-                const userProf = profRes.data.find((p: any) => p.user_id === user.id);
-                if (userProf) {
-                    setFullName(userProf.full_name || '');
-                    setBio(userProf.bio || '');
-                    setPhotoUrl(userProf.photo_url || '');
+                setProjects(projRes.rows || []);
+
+                if (profRes.data) {
+                    const userProf = profRes.data.find((p: any) => p.user_id === user.id);
+                    if (userProf) {
+                        setFullName(userProf.full_name || '');
+                        setBio(userProf.bio || '');
+                        setPhotoUrl(userProf.photo_url || '');
+                    }
                 }
-            }
 
-            const notifRes = await neon.from('notifications').select('*');
-            if (notifRes.data) {
-                setNotifications(notifRes.data.filter((n: any) => n.user_id === user.id));
+                if (notifRes.data) {
+                    setNotifications(notifRes.data.filter((n: any) => n.user_id === user.id));
+                }
+            } catch (err) {
+                console.error('Error fetching initial data:', err);
             }
         };
         fetchData();
@@ -241,7 +256,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         if (!user || !window.confirm('Reset all fitness data for today?')) return;
         setLoading(true);
         try {
-            const today = new Date().toISOString().split('T')[0];
+            const today = getLocalDate();
+            // 1. Reset health_stats for today in local time
             await neon.from('health_stats').update({
                 steps: 0,
                 calories_consumed: 0,
@@ -249,8 +265,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 active_minutes: 0
             }).match({ user_id: user.id, date: today });
 
-            // Delete today's workout entries to mark days incomplete and remove calories
-            await neon.query('DELETE FROM workouts WHERE user_id = $1 AND created_at::date = $2', [user.id, today]);
+            // 2. Robustly delete workouts created in the last 24 hours (or better, since local midnight)
+            // We use a broader range or a targeted query to catch timezone discrepancies
+            await neon.query(`
+                DELETE FROM workouts 
+                WHERE user_id = $1 
+                AND (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date = $2
+            `, [user.id, today]);
 
             // Also deactivate active workouts
             await neon.from('workouts').update({ status: 'cancelled' }).match({ user_id: user.id, status: 'active' });
@@ -473,13 +494,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                         </div>
                     </div>
                     <div className="space-y-1">
-                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Project (Optional)</label>
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Select Project</label>
                         <select
                             value={projectId || ''}
                             onChange={(e) => setProjectId(e.target.value)}
                             className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-bold"
+                            required
                         >
-                            <option value="">No Project</option>
+                            <option value="" disabled>Choose a project...</option>
                             {projects.map(p => (
                                 <option key={p.id} value={p.id}>{p.title}</option>
                             ))}

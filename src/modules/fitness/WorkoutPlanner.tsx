@@ -39,6 +39,17 @@ const WorkoutPlanner: React.FC = () => {
 
     const isCompleted = (id: string) => completedWorkoutTitles.includes(id);
 
+    const handleResetPlan = async () => {
+        if (!user || !window.confirm('Clear ALL workout progress for this plan?')) return;
+        try {
+            await neon.query('DELETE FROM workouts WHERE user_id = $1', [user.id]);
+            window.location.reload();
+        } catch (err) {
+            console.error('Error resetting plan:', err);
+            alert('Failed to reset progress');
+        }
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-24">
             <header className="space-y-4">
@@ -47,7 +58,12 @@ const WorkoutPlanner: React.FC = () => {
                         <h2 className="text-3xl font-black text-gray-900 tracking-tighter italic">My Plan</h2>
                         <p className="text-gray-500 font-medium">8-Week Transformation</p>
                     </div>
-                    <Button variant="ghost" size="sm" className="text-red-500 font-bold uppercase text-[10px] tracking-widest" onClick={() => window.location.reload()}>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-500 font-bold uppercase text-[10px] tracking-widest"
+                        onClick={handleResetPlan}
+                    >
                         <RotateCcw size={14} className="mr-1" /> Reset
                     </Button>
                 </div>

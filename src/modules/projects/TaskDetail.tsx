@@ -77,6 +77,19 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onStatusUpdate, 
         }
     };
 
+    const deleteTask = async () => {
+        if (!window.confirm('Are you sure you want to delete this task?')) return;
+        try {
+            await neon.query('DELETE FROM tasks WHERE id = $1', [task.id]);
+            onClose();
+            if (onUpdate) onUpdate(null); // Signal deletion
+            window.location.reload();
+        } catch (err) {
+            console.error('Error deleting task:', err);
+            alert('Failed to delete task');
+        }
+    };
+
     const deleteSubtask = async (id: number) => {
         try {
             await neon.query('DELETE FROM subtasks WHERE id = $1', [id]);
@@ -303,7 +316,7 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onStatusUpdate, 
                 </div>
 
                 {/* Footer Actions */}
-                <footer className="sticky bottom-0 bg-white border-t border-gray-100 p-6">
+                <footer className="sticky bottom-0 bg-white border-t border-gray-100 p-6 space-y-4">
                     <div className="flex gap-2">
                         {['todo', 'in_progress', 'done'].map((status) => (
                             <Button
@@ -316,6 +329,14 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onStatusUpdate, 
                             </Button>
                         ))}
                     </div>
+                    <Button
+                        variant="ghost"
+                        fullWidth
+                        className="text-red-500 font-bold uppercase text-[10px] tracking-widest h-12"
+                        onClick={deleteTask}
+                    >
+                        Delete Task
+                    </Button>
                 </footer>
             </div>
         </div>

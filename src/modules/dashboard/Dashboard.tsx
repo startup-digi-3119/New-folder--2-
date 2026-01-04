@@ -21,7 +21,7 @@ import { useAuth } from '../../store/AuthContext';
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { } = useUI();
+    const { openModal } = useUI();
     const [realStats, setRealStats] = React.useState({
         steps: '0',
         calories: '0',
@@ -47,31 +47,32 @@ const Dashboard: React.FC = () => {
                     case '30days': filterDate = new Date(now.setDate(now.getDate() - 30)); break;
                     case '60days': filterDate = new Date(now.setDate(now.getDate() - 60)); break;
                 }
-                const filterStr = filterDate ? filterDate.toISOString().split('T')[0] : '';
+                const filterStr = filterDate ? (() => {
+                    const offset = filterDate.getTimezoneOffset() * 60000;
+                    return new Date(filterDate.getTime() - offset).toISOString().split('T')[0];
+                })() : '';
 
-                // 1. Calories from workouts
                 let calorieQuery = 'SELECT SUM(calories_burned) as total FROM workouts WHERE user_id = $1';
                 if (filterStr) calorieQuery += ` AND created_at::date >= '${filterStr}'`;
-                const workoutRes = await neon.query(calorieQuery, [user.id]);
-                const calories = workoutRes.rows[0]?.total || 0;
 
-                // 2. Health Stats (Steps, Sleep, Consumed)
                 let healthQuery = 'SELECT SUM(steps) as steps, SUM(sleep_minutes) as sleep, SUM(calories_consumed) as consumed FROM health_stats WHERE user_id = $1';
                 if (filterStr) healthQuery += ` AND date >= '${filterStr}'`;
-                const healthRes = await neon.query(healthQuery, [user.id]);
+
+                // Parallel fetching for dashboard stats
+                const [workoutRes, healthRes, taskRes, transRes, pendingRes] = await Promise.all([
+                    neon.query(calorieQuery, [user.id]),
+                    neon.query(healthQuery, [user.id]),
+                    neon.query('SELECT COUNT(*)::int as count FROM projects WHERE user_id = $1', [user.id]),
+                    neon.query('SELECT * FROM transactions WHERE user_id = $1', [user.id]),
+                    neon.query('SELECT * FROM tasks WHERE user_id = $1 AND status != $2 ORDER BY created_at DESC LIMIT 1', [user.id, 'done'])
+                ]);
+
+                const calories = workoutRes.rows[0]?.total || 0;
                 const hStats = healthRes.rows[0] || { steps: 0, sleep: 0, consumed: 0 };
-
-                // 3. Active Projects
-                const taskRes = await neon.query('SELECT COUNT(*) FROM projects WHERE user_id = $1', [user.id]);
-
-                // 4. Financial Balance
-                const transRes = await neon.query('SELECT * FROM transactions WHERE user_id = $1', [user.id]);
                 const trans = transRes.rows;
                 const income = trans.filter((t: any) => t.type === 'income').reduce((acc: number, t: any) => acc + Number(t.amount), 0);
                 const expense = trans.filter((t: any) => t.type === 'expense').reduce((acc: number, t: any) => acc + Number(t.amount), 0);
 
-                // 5. Latest Pending Task
-                const pendingRes = await neon.query('SELECT * FROM tasks WHERE user_id = $1 AND status != $2 ORDER BY created_at DESC LIMIT 1', [user.id, 'done']);
                 setPendingTask(pendingRes.rows[0]);
 
                 const sleepHrs = Math.floor(hStats.sleep / 60);
@@ -124,7 +125,16 @@ const Dashboard: React.FC = () => {
             {/* Quick Stats Grid */}
             <section className="grid grid-cols-2 gap-4">
                 {stats.map((stat, i) => (
-                    <Card key={i} className="flex flex-col gap-3 group relative overflow-hidden transition-all hover:scale-[1.02] active:scale-95 cursor-pointer">
+                    <Card
+                        key={i}
+                        className="flex flex-col gap-3 group relative overflow-hidden transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
+                        onClick={() => {
+                            if (stat.id === 'food') openModal('food');
+                            else if (stat.id === 'steps') openModal('steps');
+                            else if (stat.id === 'sleep') openModal('sleep');
+                            else if (stat.id === 'project') navigate('/projects');
+                        }}
+                    >
                         <div className="flex items-center justify-between">
                             <div className={`p-2 rounded-xl ${stat.color}`}>
                                 {stat.icon}
