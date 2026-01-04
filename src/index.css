@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #1E40AF;
+  --color-secondary: #10B981;
+  --color-accent: #F97316;
+  --color-background: #F8FAFC;
+  --color-text: #374151;
+  --font-heading: "Inter", sans-serif;
+  --font-body: system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+:root {
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
