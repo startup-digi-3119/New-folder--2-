@@ -25,12 +25,16 @@ const FitnessDashboard: React.FC = () => {
             try {
                 // Get start of today in local time
                 const now = new Date();
-                const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+                const offset = now.getTimezoneOffset() * 60000;
+                const localDate = new Date(now.getTime() - offset).toISOString();
+                const dateStr = localDate.split('T')[0];
+                // For timestamps (workouts), we can use the ISO string of the start of main local day
+                const startOfDay = new Date(now.setHours(0, 0, 0, 0)).toISOString();
 
                 // Fetch data in parallel
                 const [workouts, health] = await Promise.all([
                     neon.query(`SELECT SUM(calories_burned) as calories, SUM(duration_seconds) as duration FROM workouts WHERE user_id = $1 AND created_at >= $2`, [user.id, startOfDay]),
-                    neon.query(`SELECT steps, active_minutes FROM health_stats WHERE user_id = $1 AND date = $2`, [user.id, startOfDay.split('T')[0]])
+                    neon.query(`SELECT steps, active_minutes FROM health_stats WHERE user_id = $1 AND date = $2`, [user.id, dateStr])
                 ]);
 
                 // Aggregate workouts

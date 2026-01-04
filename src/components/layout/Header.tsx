@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import logo from '../../assets/logo.png';
 import { Bell, Settings, Menu, Download } from 'lucide-react';
 import { useUI } from '../../store/UIContext';
@@ -10,10 +10,10 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onMenuClick, photoUrl }) => {
-    const { openModal } = useUI();
+    const { openModal, deferredPrompt, setDeferredPrompt } = useUI();
     const { user } = useAuth();
     const initials = user?.email?.substring(0, 2).toUpperCase() || 'JD';
-    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+    // Removed local state [deferredPrompt, setDeferredPrompt]
 
     useEffect(() => {
         const handler = (e: any) => {
@@ -22,7 +22,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, photoUrl }) => {
         };
         window.addEventListener('beforeinstallprompt', handler);
         return () => window.removeEventListener('beforeinstallprompt', handler);
-    }, []);
+    }, [setDeferredPrompt]);
 
     const handleInstallClick = async () => {
         if (!deferredPrompt) return;

@@ -29,12 +29,13 @@ const ProjectBoard: React.FC = () => {
     const fetchData = async () => {
         if (!user || !id) return;
         try {
-            // Fetch project details
-            const projResult = await neon.query('SELECT * FROM projects WHERE id = $1', [id]);
-            setProject(projResult.rows[0]);
+            // Fetch project and tasks in parallel
+            const [projResult, taskResult] = await Promise.all([
+                neon.query('SELECT * FROM projects WHERE id = $1', [id]),
+                neon.query('SELECT * FROM tasks WHERE project_id = $1', [id])
+            ]);
 
-            // Fetch tasks
-            const taskResult = await neon.query('SELECT * FROM tasks WHERE project_id = $1', [id]);
+            setProject(projResult.rows[0]);
             setTasks(taskResult.rows || []);
         } catch (err) {
             console.error('Error fetching board data:', err);

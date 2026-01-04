@@ -10,9 +10,11 @@ import {
     FileText,
     Wallet,
     LogOut,
-    BarChart3
+    BarChart3,
+    Download
 } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
+import { useUI } from '../../store/UIContext';
 
 interface MobileSidebarProps {
     isOpen: boolean;
@@ -21,6 +23,7 @@ interface MobileSidebarProps {
 
 const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, onClose }) => {
     const { signOut } = useAuth();
+    const { deferredPrompt, setDeferredPrompt } = useUI();
 
     const menuItems = [
         { icon: <Home size={20} />, label: 'Dashboard', path: '/dashboard' },
@@ -76,7 +79,23 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, onClose }) => {
                         ))}
                     </nav>
 
-                    <div className="p-4 border-t border-gray-100">
+                    <div className="p-4 border-t border-gray-100 space-y-2">
+                        {deferredPrompt && (
+                            <button
+                                onClick={() => {
+                                    deferredPrompt.prompt();
+                                    deferredPrompt.userChoice.then((choiceResult: any) => {
+                                        if (choiceResult.outcome === 'accepted') {
+                                            setDeferredPrompt(null);
+                                        }
+                                    });
+                                }}
+                                className="flex items-center gap-3 w-full px-4 py-3 text-white bg-primary font-bold hover:bg-primary/90 rounded-2xl transition-all shadow-lg shadow-primary/20"
+                            >
+                                <Download size={20} />
+                                <span className="text-sm">Install App</span>
+                            </button>
+                        )}
                         <button
                             onClick={() => {
                                 signOut();

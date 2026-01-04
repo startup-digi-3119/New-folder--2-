@@ -40,14 +40,17 @@ const ProjectsDashboard: React.FC = () => {
 
         const fetchProjects = async () => {
             try {
-                const projResult = await neon.query('SELECT * FROM projects WHERE user_id = $1', [user.id]);
+                // Fetch projects and active tasks count in parallel
+                const [projResult, tasksResult] = await Promise.all([
+                    neon.query('SELECT * FROM projects WHERE user_id = $1', [user.id]),
+                    neon.query('SELECT COUNT(*)::int as count FROM tasks WHERE user_id = $1 AND status != $2', [user.id, 'done'])
+                ]);
+
                 const data = projResult.rows;
                 setProjects(data || []);
 
-                // Fetch total active tasks for stats
-                // Fetch total active tasks for stats
-                const tasksResult = await neon.query('SELECT * FROM tasks WHERE user_id = $1', [user.id]);
-                const activeCount = (tasksResult.rows || []).filter((t: any) => t.status !== 'done').length;
+                // Get count from optimized query
+                const activeCount = tasksResult.rows[0]?.count || 0;
                 setStats(prev => ({ ...prev, activeTasks: activeCount }));
 
             } catch (err) {
