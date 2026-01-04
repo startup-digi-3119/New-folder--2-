@@ -30,6 +30,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     const [category, setCategory] = useState('General');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [time, setTime] = useState('09:00');
+    const [postContent, setPostContent] = useState('');
+    const [postImage, setPostImage] = useState<string | null>(null);
+    const [postLocation, setPostLocation] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
     const handleCreateProject = async (e: React.FormEvent) => {
@@ -134,26 +137,54 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     };
 
     const handleCreateNote = async (e: React.FormEvent) => {
+        // ...Existing note logic (simulated for now as per previous version)
+        console.log('Creating note:', { title, description });
+        await new Promise(resolve => setTimeout(resolve, 500));
+        closeModal();
+        setTitle('');
+        setDescription('');
+    };
+
+    const handleCreatePost = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user) return;
         setLoading(true);
         try {
-            // For now, we'll store notes in a 'notes' table if it existed, or just simulate it
-            // Since we don't know the schema for notes, we'll just log it and close modal
-            // In a real app, this would be: await neon.from('notes').insert({ ... })
-            console.log('Creating note:', { title, description });
-
-            // Simulating a delay
-            await new Promise(resolve => setTimeout(resolve, 500));
-
+            const { error } = await neon.from('posts').insert({
+                user_id: user.id,
+                content: postContent,
+                image: postImage,
+                location: postLocation,
+                type: 'Update',
+                likes: 0,
+                comments: 0
+            });
+            if (error) throw error;
             closeModal();
-            setTitle('');
-            setDescription('');
-            // window.location.reload(); // No need to reload for a simulation
-        } catch (err) {
-            console.error('Error creating note:', err);
+            setPostContent('');
+            setPostImage(null);
+            setPostLocation(null);
+            window.location.reload();
+        } catch (err: any) {
+            console.error('Error creating post:', err);
+            alert(`Failed to create post: ${err.message}`);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSelectImage = () => {
+        const url = window.prompt("Enter image URL (mocking file upload for PWA):");
+        if (url) setPostImage(url);
+    };
+
+    const handleGetLocation = () => {
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                setPostLocation(`${position.coords.latitude.toFixed(2)}, ${position.coords.longitude.toFixed(2)}`);
+            });
+        } else {
+            alert("Geolocation not supported");
         }
     };
 
@@ -409,7 +440,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 onClose={closeModal}
                 title="Create Post"
             >
-                <form className="space-y-4">
+                <form onSubmit={handleCreatePost} className="space-y-4">
                     <div className="flex items-center gap-3 p-1">
                         <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-black italic">
                             {user?.email?.substring(0, 2).toUpperCase() || 'JD'}
@@ -417,15 +448,29 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                         <span className="font-bold text-gray-900">{user?.email?.split('@')[0]}</span>
                     </div>
                     <textarea
+                        value={postContent}
+                        onChange={(e) => setPostContent(e.target.value)}
                         placeholder="What's on your mind? Share your progress..."
                         className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 focus:ring-2 focus:ring-primary/20 outline-none font-medium h-40 resize-none"
+                        required
                     />
+                    {postImage && (
+                        <div className="relative rounded-2xl overflow-hidden aspect-video bg-gray-100">
+                            <img src={postImage} alt="Post preview" className="w-full h-full object-cover" />
+                            <button onClick={() => setPostImage(null)} className="absolute top-2 right-2 bg-black/50 text-white p-1 rounded-full">✕</button>
+                        </div>
+                    )}
+                    {postLocation && (
+                        <div className="text-[10px] font-black uppercase text-primary bg-primary/5 p-2 rounded-xl inline-block px-3 italic tracking-widest">
+                            📍 {postLocation}
+                        </div>
+                    )}
                     <div className="flex gap-2">
-                        <Button variant="ghost" className="flex-1 bg-gray-50 text-gray-400 text-xs">📷 Add Photo</Button>
-                        <Button variant="ghost" className="flex-1 bg-gray-50 text-gray-400 text-xs">📍 Location</Button>
+                        <Button type="button" onClick={handleSelectImage} variant="ghost" className="flex-1 bg-gray-50 text-gray-400 text-xs">📷 Add Photo</Button>
+                        <Button type="button" onClick={handleGetLocation} variant="ghost" className="flex-1 bg-gray-50 text-gray-400 text-xs">📍 Location</Button>
                     </div>
-                    <Button fullWidth onClick={(e) => { e.preventDefault(); closeModal(); }}>
-                        Post to Feed
+                    <Button type="submit" fullWidth disabled={loading}>
+                        {loading ? 'Posting...' : 'Post to Feed'}
                     </Button>
                 </form>
             </Modal>

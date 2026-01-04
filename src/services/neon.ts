@@ -1,44 +1,35 @@
-import { neon as neonConfig } from '@neondatabase/serverless';
+import { Pool } from '@neondatabase/serverless';
 
 const connectionString = import.meta.env.VITE_NEON_DATABASE_URL;
 
-if (!connectionString) {
-    console.warn('Neon database URL missing. Database operations will fail.');
+const isPlaceholder = connectionString?.includes('user:password@hostname');
+
+if (!connectionString || isPlaceholder) {
+    console.error('CRITICAL: Neon Database URL is missing or set to the placeholder value. Please update VITE_NEON_DATABASE_URL in your environment variables.');
 }
 
-// Create the sql client using the HTTP driver
-const sql = connectionString ? neonConfig(connectionString) : null;
+// Create the pool using the serverless driver (WebSocket-based, pg-compatible)
+const pool = new Pool({
+    connectionString: isPlaceholder ? 'postgresql://localhost:5432/placeholder' : connectionString,
+    // Add some defaults for reliability
+    connectionTimeoutMillis: 10000,
+});
 
-// Helper function to execute queries using the HTTP driver
+// Helper function to execute queries
 export const query = async (text: string, params: any[] = []) => {
-    if (!sql) {
-        throw new Error('Neon database client not initialized. Check your environment variables.');
+    if (!connectionString || isPlaceholder) {
+        throw new Error('Database connection failed: The connection URL is invalid or is the placeholder value from .env.example. Please update your Vercel/Environment Variables.');
     }
 
+    const client = await pool.connect();
     try {
-        // The serverless driver takes a query string and returns rows directly if using the neon function
-        // We need to handle parameters correctly. 
-        // Note: The `neon` function from @neondatabase/serverless handles param injection via template literals
-        // But since we want to support the (text, params) signature, we use the tag-less version or handle string manipulation
-
-        // For standard (text, params) support, we can use the raw query method if we wrap it
-        // However, the simplest way with the HTTP driver is to use the sql instance
-
-        // Let's implement a simple parameter replacement for the HTTP driver if it doesn't support (text, params) directly
-        let processedText = text;
-        const result = await (sql as any)(processedText, params);
-
-        // Return a response shape compatible with what the app expects (pg Result shape)
-        return {
-            rows: result,
-            command: 'SELECT', // mock
-            rowCount: result.length,
-            oid: 0,
-            fields: []
-        };
+        const result = await client.query(text, params);
+        return result;
     } catch (error: any) {
         console.error('Database query error:', error);
         throw error;
+    } finally {
+        client.release();
     }
 };
 
@@ -48,8 +39,8 @@ export const neon = {
     from: (table: string) => ({
         select: async (columns: string = '*') => {
             try {
-                const rows = await query(`SELECT ${columns} FROM ${table}`);
-                return { data: rows.rows, error: null };
+                const result = await query(`SELECT ${columns} FROM ${table}`);
+                return { data: result.rows, error: null };
             } catch (error: any) {
                 return { data: null, error };
             }
