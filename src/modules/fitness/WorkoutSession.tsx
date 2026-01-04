@@ -14,7 +14,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
-import { supabase } from '../../services/supabase';
+import { neon } from '../../services/neon';
 import { useAuth } from '../../store/AuthContext';
 import { WORKOUT_PLAN } from '../../data/workoutPlan';
 import { bluetoothManager } from '../../services/bluetooth';
@@ -141,7 +141,7 @@ const WorkoutSession: React.FC = () => {
         if (!user) return;
         setIsSaving(true);
         try {
-            const { error } = await supabase.from('workouts').insert({
+            const { error } = await neon.from('workouts').insert({
                 user_id: user.id,
                 name: currentDay?.title || `Workout Session`,
                 duration_seconds: seconds,

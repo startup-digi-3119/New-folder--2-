@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../services/supabase';
+import { firebase } from '../services/firebase';
 import type { User } from '@supabase/supabase-js';
 
 interface AuthContextType {
@@ -16,13 +16,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     useEffect(() => {
         // Check for active session
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        firebase.auth.getSession().then(({ data: { session } }: any) => {
             setUser(session?.user ?? null);
             setLoading(false);
         });
 
         // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = firebase.auth.onAuthStateChange((_event: any, session: any) => {
             setUser(session?.user ?? null);
             setLoading(false);
         });
@@ -31,7 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
     const signOut = async () => {
-        await supabase.auth.signOut();
+        await firebase.auth.signOut();
     };
 
     return (

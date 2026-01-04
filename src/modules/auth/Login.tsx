@@ -4,7 +4,7 @@ import { Mail, Lock, ArrowRight, Github, Chrome, Eye, EyeOff, Activity } from 'l
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 
-import { supabase } from '../../services/supabase';
+import { firebase } from '../../services/firebase';
 
 const Login: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -20,7 +20,7 @@ const Login: React.FC = () => {
         setError(null);
 
         try {
-            const { error } = await supabase.auth.signInWithPassword({
+            const { error } = await firebase.auth.signInWithPassword({
                 email,
                 password,
             });

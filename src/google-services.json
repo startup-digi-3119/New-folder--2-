@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "697721057428",
+    "project_id": "myplan-be94f",
+    "storage_bucket": "myplan-be94f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:697721057428:android:8a73bea16a3c378c7dc481",
+        "android_client_info": {
+          "package_name": "mnyapp_02.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBrEEusvxRt1Zcq6BZaiWqHMpp6fZhMhiI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

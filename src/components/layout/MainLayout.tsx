@@ -5,7 +5,7 @@ import MobileSidebar from './MobileSidebar';
 import { useUI } from '../../store/UIContext';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
-import { supabase } from '../../services/supabase';
+import { neon } from '../../services/neon';
 import { useAuth } from '../../store/AuthContext';
 
 interface MainLayoutProps {
@@ -37,7 +37,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         if (!user) return;
         setLoading(true);
         try {
-            const { error } = await supabase.from('projects').insert({
+            const { error } = await neon.from('projects').insert({
                 user_id: user.id,
                 title,
                 description,
@@ -62,7 +62,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         try {
             // For simplicity, we'll try to find an active project or just insert without one if allowed
             // Real implementation would need project selection
-            const { error } = await supabase.from('tasks').insert({
+            const { error } = await neon.from('tasks').insert({
                 user_id: user.id,
                 title,
                 description,
@@ -86,7 +86,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         if (!user) return;
         setLoading(true);
         try {
-            const { error } = await supabase.from('transactions').insert({
+            const { error } = await neon.from('transactions').insert({
                 user_id: user.id,
                 amount: Number(amount),
                 type,
@@ -113,7 +113,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         setLoading(true);
         try {
             // We'll treat calendar events as tasks for now or just log them
-            const { error } = await supabase.from('tasks').insert({
+            const { error } = await neon.from('tasks').insert({
                 user_id: user.id,
                 title,
                 description: `Event: ${description}`,
@@ -140,7 +140,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         try {
             // For now, we'll store notes in a 'notes' table if it existed, or just simulate it
             // Since we don't know the schema for notes, we'll just log it and close modal
-            // In a real app, this would be: await supabase.from('notes').insert({ ... })
+            // In a real app, this would be: await neon.from('notes').insert({ ... })
             console.log('Creating note:', { title, description });
 
             // Simulating a delay

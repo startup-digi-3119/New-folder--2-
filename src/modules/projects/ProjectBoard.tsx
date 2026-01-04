@@ -9,7 +9,7 @@ import TaskDetail from './TaskDetail';
 import { useParams, useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 
-import { supabase } from '../../services/supabase';
+import { neon } from '../../services/neon';
 import { useAuth } from '../../store/AuthContext';
 
 const ProjectBoard: React.FC = () => {
@@ -54,7 +54,7 @@ const ProjectBoard: React.FC = () => {
         if (!title) return;
 
         try {
-            const { error } = await supabase.from('tasks').insert({
+            const { error } = await neon.from('tasks').insert({
                 user_id: user.id,
                 project_id: id,
                 title,

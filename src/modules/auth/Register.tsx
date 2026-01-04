@@ -4,7 +4,7 @@ import { Mail, Lock, User, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 
-import { supabase } from '../../services/supabase';
+import { firebase } from '../../services/firebase';
 
 const Register: React.FC = () => {
     const [fullName, setFullName] = useState('');
@@ -23,7 +23,7 @@ const Register: React.FC = () => {
         setSuccess(false);
 
         try {
-            const { error } = await supabase.auth.signUp({
+            const { error } = await firebase.auth.signUp({
                 email,
                 password,
                 options: {

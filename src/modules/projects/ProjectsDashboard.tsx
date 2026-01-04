@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 
-import { supabase } from '../../services/supabase';
+import { neon } from '../../services/neon';
 import { useAuth } from '../../store/AuthContext';
 import { useUI } from '../../store/UIContext';
 
