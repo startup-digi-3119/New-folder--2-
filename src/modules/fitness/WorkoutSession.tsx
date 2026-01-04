@@ -2,86 +2,68 @@ import React, { useState, useEffect } from 'react';
 import {
     Play,
     Pause,
-    RotateCcw,
     ChevronRight,
     X,
     Timer,
+    Dumbbell,
+    CheckCircle2,
     Flame,
-    Activity,
-    ShieldAlert
+    Info
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
-import { bluetoothManager } from '../../services/bluetooth';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../store/AuthContext';
+import { WORKOUT_PLAN } from '../../data/workoutPlan';
+import type { Exercise } from '../../data/workoutPlan';
 
 const WorkoutSession: React.FC = () => {
     const navigate = useNavigate();
-    const { id } = useParams();
+    const { id } = useParams(); // Format: week-phaseId-day
     const { user } = useAuth();
+
+    // Timer State
     const [seconds, setSeconds] = useState(0);
     const [isActive, setIsActive] = useState(false);
-    const [heartRate, setHeartRate] = useState(0);
-    const [isSyncing, setIsSyncing] = useState(false);
-    const [btError, setBtError] = useState<string | null>(null);
+
+    // Workout State
+    const [currentDay, setCurrentDay] = useState<any>(null);
+    const [allExercises, setAllExercises] = useState<Exercise[]>([]);
+    const [currentExerciseIdx, setCurrentExerciseIdx] = useState(0);
+    const [completedSets, setCompletedSets] = useState(0);
+    const [isFinished, setIsFinished] = useState(false);
+
+    // Final Form
+    const [calories, setCalories] = useState('300'); // Default estimtate
     const [isSaving, setIsSaving] = useState(false);
 
-    const saveWorkout = async () => {
-        if (!user) return;
-        setIsSaving(true);
-        try {
-            const { error } = await supabase.from('workouts').insert({
-                user_id: user.id,
-                name: `Workout Session #${id?.slice(0, 4) || 'New'}`,
-                duration_seconds: seconds,
-                average_hr: heartRate,
-                calories_burned: Math.floor(seconds * (heartRate > 0 ? 0.1 : 0.05)),
-            });
+    useEffect(() => {
+        if (!id) return;
+        // Parse ID: e.g. "week-1-2-1" -> Phase "week-1-2", Day 1
+        // We know the ID format is set in WorkoutPlanner as `${selectedPhase.id}-${day.day}`.
+        // But wait, the ID might contain hyphens.
+        // Let's split by hyphen. 
+        // Best approach: Iterate phases, check if ID starts with phase ID.
 
-            if (error) throw error;
-            navigate('/fitness');
-        } catch (err: any) {
-            console.error('Failed to save workout:', err);
-        } finally {
-            setIsSaving(false);
+        let foundPhase = WORKOUT_PLAN.find(p => id.startsWith(p.id));
+        if (foundPhase) {
+            const dayNum = parseInt(id.replace(foundPhase.id + '-', ''));
+            const dayData = foundPhase.schedule.find(d => d.day === dayNum);
+            if (dayData) {
+                setCurrentDay(dayData);
+                // Combine regular exercises and abs
+                const exercises = [...dayData.exercises];
+                if (dayData.abs) exercises.push(...dayData.abs);
+                setAllExercises(exercises);
+            }
         }
-    };
+    }, [id]);
 
-    const checkBluetoothSupport = () => {
-        if (!navigator.bluetooth) {
-            setBtError('Bluetooth API not supported in this browser. Try Chrome or Edge.');
-            return false;
-        }
-        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-            setBtError('Web Bluetooth requires a secure HTTPS connection. Please deploy or use local testing.');
-            return false;
-        }
-        return true;
-    };
-
-    const startBluetoothSync = async () => {
-        setBtError(null);
-        if (!checkBluetoothSupport()) return;
-
-        setIsSyncing(true);
-        try {
-            await bluetoothManager.requestDevice();
-            await bluetoothManager.connect((bpm) => {
-                setHeartRate(bpm);
-            });
-        } catch (error: any) {
-            console.error('BT Sync Error:', error);
-            setBtError(error.message || 'Failed to connect to device.');
-        } finally {
-            setIsSyncing(false);
-        }
-    };
-
+    // Timer Logic
     useEffect(() => {
         let interval: any = null;
-        if (isActive) {
+        if (isActive && !isFinished) {
             interval = setInterval(() => {
                 setSeconds(seconds => seconds + 1);
             }, 1000);
@@ -89,7 +71,7 @@ const WorkoutSession: React.FC = () => {
             clearInterval(interval);
         }
         return () => clearInterval(interval);
-    }, [isActive]);
+    }, [isActive, isFinished]);
 
     const formatTime = (totalSeconds: number) => {
         const mins = Math.floor(totalSeconds / 60);
@@ -97,119 +79,194 @@ const WorkoutSession: React.FC = () => {
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
-    const exercise: any = null; // Purged demo exercise
+    const handleNext = () => {
+        const currentEx = allExercises[currentExerciseIdx];
+        if (currentEx) {
+            // Check if we finished all sets for this exercise
+            // For simplicity, we assume user clicks "Next" after completing the full exercise or a set.
+            // Let's implement set-based tracking.
+            if (completedSets < currentEx.sets - 1) {
+                setCompletedSets(prev => prev + 1);
+            } else {
+                // Exercise Complete
+                if (currentExerciseIdx < allExercises.length - 1) {
+                    setCurrentExerciseIdx(prev => prev + 1);
+                    setCompletedSets(0);
+                } else {
+                    // Workout Complete
+                    setIsFinished(true);
+                    setIsActive(false);
+                }
+            }
+        }
+    };
+
+    const saveWorkout = async () => {
+        if (!user) return;
+        setIsSaving(true);
+        try {
+            const { error } = await supabase.from('workouts').insert({
+                user_id: user.id,
+                name: currentDay?.title || `Workout Session`,
+                duration_seconds: seconds,
+                calories_burned: parseInt(calories),
+                average_hr: 0, // Manual entry doesn't have HR usually
+            });
+
+            if (error) throw error;
+            navigate('/fitness');
+        } catch (err: any) {
+            console.error('Failed to save workout:', err);
+            alert(`Failed to save: ${err.message}`);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    if (!currentDay) {
+        return (
+            <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">
+                Loading Plan...
+            </div>
+        );
+    }
+
+    if (isFinished) {
+        return (
+            <div className="min-h-screen bg-slate-900 text-white p-6 flex flex-col items-center justify-center space-y-8 animate-in fade-in duration-500">
+                <div className="w-24 h-24 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-500 mb-4 animate-bounce">
+                    <CheckCircle2 size={48} />
+                </div>
+                <div className="text-center space-y-2">
+                    <h1 className="text-3xl font-black italic uppercase tracking-tighter">Workout Crushed!</h1>
+                    <p className="text-gray-400">Great job completing {currentDay.title}.</p>
+                </div>
+
+                <Card className="bg-white/10 border-none text-white w-full max-w-sm p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <span className="font-bold text-gray-400 uppercase text-xs tracking-widest">Duration</span>
+                        <span className="font-black text-xl font-mono">{formatTime(seconds)}</span>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="font-bold text-gray-400 uppercase text-xs tracking-widest flex items-center gap-2">
+                            <Flame size={14} className="text-orange-500" /> Calories Burnt
+                        </label>
+                        <input
+                            type="number"
+                            className="w-full bg-slate-900/50 border border-white/10 rounded-xl p-3 text-center font-black text-2xl outline-none focus:border-emerald-500 transition-colors"
+                            value={calories}
+                            onChange={(e) => setCalories(e.target.value)}
+                        />
+                        <p className="text-[10px] text-gray-500 text-center">Enter value from your smartwatch</p>
+                    </div>
+                </Card>
+
+                <Button
+                    fullWidth
+                    variant="primary"
+                    className="h-14 font-black uppercase italic tracking-widest text-lg rounded-2xl"
+                    onClick={saveWorkout}
+                    disabled={isSaving}
+                >
+                    {isSaving ? 'Saving...' : 'Save & Finish'}
+                </Button>
+            </div>
+        )
+    }
+
+    const currentEx = allExercises[currentExerciseIdx];
 
     return (
-        <div className="min-h-screen bg-slate-900 text-white animate-in slide-in-from-right duration-500">
-            <header className="p-6 flex items-center justify-between border-b border-white/10">
-                <button onClick={() => navigate(-1)} className="p-2 bg-white/10 rounded-xl">
+        <div className="min-h-screen bg-slate-900 text-white flex flex-col">
+            {/* Header */}
+            <header className="p-6 flex items-center justify-between z-10">
+                <button onClick={() => navigate('/fitness')} className="p-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors">
                     <X size={24} />
                 </button>
                 <div className="text-center">
-                    <h2 className="text-sm font-black uppercase tracking-widest text-emerald-400 italic">No Session Active</h2>
-                    <p className="text-[10px] font-bold text-white/50 uppercase">Session #{id || '0'}</p>
+                    <h2 className="text-xs font-black uppercase tracking-widest text-emerald-400 italic">Day {currentDay.day}</h2>
+                    <p className="text-sm font-bold">{currentDay.focus}</p>
                 </div>
                 <div className="w-10"></div>
             </header>
 
-            <div className="p-6 space-y-8 pb-32">
-                {/* Timer UI */}
-                <div className="text-center space-y-2">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10 text-white/70">
+            {/* Main Content */}
+            <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-12 relative">
+                {/* Background Decoration */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/20 blur-[100px] rounded-full pointer-events-none"></div>
+
+                {/* Timer */}
+                <div className="text-center space-y-2 relative z-10" onClick={() => setIsActive(!isActive)}>
+                    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border transition-all cursor-pointer ${isActive ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-white/5 border-white/10 text-gray-400'}`}>
                         <Timer size={16} />
-                        <span className="text-xs font-bold uppercase tracking-widest underline decoration-emerald-500/50 underline-offset-4">Timer Ready</span>
+                        <span className="text-xs font-bold uppercase tracking-widest">{isActive ? 'Active' : 'Paused'}</span>
                     </div>
-                    <h1 className="text-7xl font-black tracking-tighter tabular-nums font-mono italic">
+                    <h1 className="text-8xl font-black tracking-tighter tabular-nums font-mono italic text-white drop-shadow-2xl">
                         {formatTime(seconds)}
                     </h1>
                 </div>
 
-                {/* Empty State Card */}
-                {!exercise ? (
-                    <Card className="bg-white/5 border-white/10 p-12 flex flex-col items-center justify-center text-center gap-4 border-dashed">
-                        <Activity className="text-white/10" size={60} />
-                        <div className="space-y-1">
-                            <h3 className="text-lg font-black italic uppercase tracking-tight">Empty Session</h3>
-                            <p className="text-xs text-white/40 font-bold max-w-xs">Return to the Fitness Dashboard to start a generated workout plan or select exercises manually.</p>
-                        </div>
-                        <Button variant="ghost" className="bg-white/10 text-white rounded-xl px-6 h-12" onClick={() => navigate('/fitness')}>Return to Fitness</Button>
-                    </Card>
-                ) : (
-                    <Card className="bg-white/5 border-white/10 p-0 overflow-hidden relative group">
-                        <div className="p-12 text-center text-white/20">
-                            Session details not available
-                        </div>
-                    </Card>
-                )}
+                {/* Current Exercise Card */}
+                {currentEx && (
+                    <div className="w-full max-w-sm space-y-4 animate-in slide-in-from-bottom-8 duration-500">
+                        <Card className="bg-white/10 border-white/5 backdrop-blur-xl p-6 border-none text-white relative overflow-hidden">
+                            <div className="relative z-10">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="p-3 bg-white/10 rounded-2xl">
+                                        <Dumbbell size={24} />
+                                    </div>
+                                    <span className="text-4xl font-black italic opacity-20">#{currentExerciseIdx + 1}</span>
+                                </div>
+                                <h3 className="text-2xl font-black uppercase italic tracking-tight mb-1">{currentEx.name}</h3>
+                                <p className="text-sm text-gray-400 font-medium mb-6">Target: {currentEx.reps} reps</p>
 
-                {/* Bluetooth Error Alert */}
-                {btError && (
-                    <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-2xl flex items-start gap-4 animate-in fade-in slide-in-from-top-2">
-                        <ShieldAlert className="text-red-500 shrink-0" size={20} />
-                        <div className="space-y-1">
-                            <p className="text-xs font-black text-red-500 uppercase tracking-widest">Security Restriction</p>
-                            <p className="text-[10px] font-bold text-red-400 leading-relaxed">{btError}</p>
-                        </div>
+                                {currentEx.notes && (
+                                    <div className="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20 mb-6">
+                                        <p className="text-xs text-blue-300 font-bold flex gap-2">
+                                            <Info size={14} /> {currentEx.notes}
+                                        </p>
+                                    </div>
+                                )}
+
+                                <div className="flex gap-2">
+                                    {Array.from({ length: currentEx.sets }).map((_, i) => (
+                                        <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${i < completedSets ? 'bg-emerald-500' : i === completedSets ? 'bg-white animate-pulse' : 'bg-white/10'
+                                            }`} />
+                                    ))}
+                                </div>
+                                <div className="mt-2 flex justify-between text-[10px] font-black uppercase text-gray-500 tracking-widest">
+                                    <span>Set {completedSets + 1} of {currentEx.sets}</span>
+                                    <span>{Math.round(((currentExerciseIdx) / allExercises.length) * 100)}% Complete</span>
+                                </div>
+                            </div>
+                        </Card>
                     </div>
                 )}
+            </div>
 
-                {/* Real-time Heatrate / Smartwatch */}
-                <div className="grid grid-cols-2 gap-4">
-                    <Card
-                        className={`p-4 flex items-center gap-3 transition-all cursor-pointer group ${heartRate > 0 ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-white/5 border-white/10 hover:border-white/30'}`}
-                        onClick={startBluetoothSync}
-                    >
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${heartRate > 0 ? 'bg-emerald-500/20' : 'bg-white/10 group-hover:bg-white/20'}`}>
-                            <Activity size={20} className={`${heartRate > 0 ? 'text-emerald-500 animate-pulse' : 'text-white/40 group-hover:text-white/60'}`} />
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-black text-white/30 uppercase tracking-tighter">{isSyncing ? 'Linking...' : 'Sync Watch'}</p>
-                            <p className="text-lg font-black italic">{heartRate || '--'} <span className="text-[10px] text-white/50 not-italic uppercase">bpm</span></p>
-                        </div>
-                    </Card>
-                    <Card className="bg-white/5 border-white/10 p-4 flex items-center gap-3">
-                        <div className="w-10 h-10 bg-orange-500/20 rounded-xl flex items-center justify-center">
-                            <Flame size={20} className="text-orange-500" />
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-black text-white/30 uppercase tracking-tighter">Energy</p>
-                            <p className="text-lg font-black italic">-- <span className="text-[10px] text-white/50 not-italic uppercase">kcal</span></p>
-                        </div>
-                    </Card>
-                </div>
+            {/* Footer Actions */}
+            <div className="p-6 bg-slate-900/80 backdrop-blur-xl border-t border-white/5 flex gap-4">
+                <Button
+                    variant="ghost"
+                    className="h-16 w-20 rounded-2xl bg-white/5 hover:bg-white/10 text-white"
+                    onClick={() => setIsActive(!isActive)}
+                >
+                    {isActive ? <Pause size={24} /> : <Play size={24} />}
+                </Button>
 
-                {/* Actions */}
-                <div className="fixed bottom-0 left-0 right-0 p-6 bg-slate-900/80 backdrop-blur-xl border-t border-white/10 flex gap-4">
-                    <Button
-                        variant="ghost"
-                        className="w-16 h-16 rounded-3xl bg-white/10 flex items-center justify-center p-0 transition-transform active:scale-95"
-                        onClick={() => setIsActive(!isActive)}
-                    >
-                        {isActive ? <Pause size={28} /> : <Play size={28} className="translate-x-0.5" />}
-                    </Button>
-
-                    <Button
-                        variant="primary"
-                        fullWidth
-                        disabled={isSaving}
-                        className="h-16 rounded-3xl text-lg font-black italic uppercase tracking-wider shadow-2xl shadow-emerald-500/20 disabled:opacity-50"
-                        onClick={saveWorkout}
-                    >
-                        {isSaving ? 'Saving...' : 'Finish Session'}
-                        <ChevronRight size={24} className="ml-2" />
-                    </Button>
-
-                    <Button
-                        variant="ghost"
-                        className="w-16 h-16 rounded-3xl bg-white/10 flex items-center justify-center p-0 transition-transform active:scale-95"
-                        onClick={() => {
-                            setSeconds(0);
-                            setIsActive(false);
-                        }}
-                    >
-                        <RotateCcw size={28} />
-                    </Button>
-                </div>
+                <Button
+                    variant="primary"
+                    fullWidth
+                    className="h-16 rounded-2xl text-lg font-black italic uppercase tracking-wider shadow-xl shadow-primary/20"
+                    onClick={handleNext}
+                >
+                    {/* Logic: if last set of last exercise -> Finish, else Next Set/Exercise */}
+                    {completedSets >= (currentEx?.sets || 1) - 1
+                        ? (currentExerciseIdx >= allExercises.length - 1 ? 'Finish Workout' : 'Next Exercise')
+                        : 'Next Set'
+                    }
+                    <ChevronRight size={20} className="ml-2" />
+                </Button>
             </div>
         </div>
     );

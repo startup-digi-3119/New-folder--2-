@@ -59,7 +59,7 @@ const FitnessDashboard: React.FC = () => {
                         className="rounded-xl px-6 h-12 font-black italic uppercase tracking-widest"
                         onClick={() => navigate('/fitness/create-plan')}
                     >
-                        Generate Plan with AI
+                        View My 8-Week Plan
                     </Button>
                 </Card>
             </section>

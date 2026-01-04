@@ -1,201 +1,151 @@
 import React, { useState } from 'react';
 import {
-    Sparkles,
+    ChevronRight,
     Dumbbell,
-    Target,
+    Play,
+    RotateCcw,
     Info,
-    Check,
-    Zap,
-    Flame,
-    Scale
+    CheckCircle2
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
+import { WORKOUT_PLAN } from '../../data/workoutPlan';
+import type { WeeklyPlan } from '../../data/workoutPlan';
+import { useNavigate } from 'react-router-dom';
 
 const WorkoutPlanner: React.FC = () => {
-    const [goal, setGoal] = useState('muscle');
-    const [level, setLevel] = useState('intermediate');
-    const [days, setDays] = useState(4);
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [aiResponse, setAiResponse] = useState<string | null>(null);
-
-    const generatePlan = async () => {
-        setIsGenerating(true);
-        setAiResponse(null);
-        try {
-            const response = await fetch('/api/generate-workout', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    model: 'llama-3.1-sonar-small-128k-chat',
-                    messages: [
-                        {
-                            role: 'system',
-                            content: 'You are an elite fitness coach. Generate a structured workout plan based on the user parameters. Return a concise plan with exercise names, sets, and reps.'
-                        },
-                        {
-                            role: 'user',
-                            content: `Generate a ${days}-day per week workout plan for a ${level} level user with the goal: ${goal}.`
-                        }
-                    ]
-                })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                const errorMessage = typeof data.error === 'string'
-                    ? data.error
-                    : data.error?.message || JSON.stringify(data.error) || 'AI request failed';
-                throw new Error(errorMessage);
-            }
-
-            setAiResponse(data.choices[0].message.content);
-        } catch (err: any) {
-            console.error('AI Generation failed:', err);
-            const displayError = err.message || 'Unknown error occurred';
-            setAiResponse(`Failed to connect to AI: ${displayError}. Please ensure your PERPLEXITY_API_KEY is configured in your Vercel Project Settings.`);
-        } finally {
-            setIsGenerating(false);
-        }
-    };
-
-    const goals = [
-        { id: 'muscle', label: 'Build Muscle', icon: <Dumbbell size={20} />, color: 'text-primary' },
-        { id: 'weight', label: 'Lose Weight', icon: <Flame size={20} />, color: 'text-orange-500' },
-        { id: 'strength', label: 'Max Strength', icon: <Zap size={20} />, color: 'text-emerald-500' },
-        { id: 'tone', label: 'Body Toning', icon: <Scale size={20} />, color: 'text-purple-500' },
-    ];
+    const navigate = useNavigate();
+    const [selectedPhase, setSelectedPhase] = useState<WeeklyPlan>(WORKOUT_PLAN[0]);
+    const [expandedDay, setExpandedDay] = useState<number | null>(null);
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-24">
-            <header className="flex flex-col gap-2 px-1">
-                <div className="flex items-center gap-2">
-                    <div className="p-2 bg-primary/10 rounded-xl">
-                        <Sparkles className="text-primary animate-pulse" size={20} />
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-24">
+            <header className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="text-3xl font-black text-gray-900 tracking-tighter italic">My Plan</h2>
+                        <p className="text-gray-500 font-medium">8-Week Transformation</p>
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">AI Generator</span>
+                    <Button variant="ghost" size="sm" className="text-red-500 font-bold uppercase text-[10px] tracking-widest" onClick={() => window.location.reload()}>
+                        <RotateCcw size={14} className="mr-1" /> Reset
+                    </Button>
                 </div>
-                <h2 className="text-3xl font-black text-gray-900">Custom Plan</h2>
-                <p className="text-gray-500 font-medium">Create your perfect workout in seconds.</p>
+
+                {/* Phase Selector */}
+                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                    {WORKOUT_PLAN.map(phase => (
+                        <button
+                            key={phase.id}
+                            onClick={() => setSelectedPhase(phase)}
+                            className={`flex-shrink-0 px-4 py-3 rounded-2xl border transition-all text-left min-w-[160px] ${selectedPhase.id === phase.id
+                                ? 'bg-slate-900 text-white border-slate-900 ring-4 ring-slate-900/10'
+                                : 'bg-white text-gray-500 border-gray-100 hover:border-gray-300'
+                                }`}
+                        >
+                            <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Phase</p>
+                            <p className="text-sm font-bold truncate">{phase.title}</p>
+                        </button>
+                    ))}
+                </div>
             </header>
 
-            {/* Goal Selection */}
-            <section className="space-y-4">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Main Goal</label>
-                <div className="grid grid-cols-2 gap-4">
-                    {goals.map(g => (
-                        <button
-                            key={g.id}
-                            onClick={() => setGoal(g.id)}
-                            className={`flex flex-col items-start gap-4 p-6 rounded-3xl transition-all border-2 text-left ${goal === g.id ? 'border-primary bg-primary/5' : 'border-gray-100 bg-white shadow-sm'
-                                }`}
-                        >
-                            <div className={`p-3 rounded-2xl bg-white shadow-sm ${g.color}`}>
-                                {g.icon}
-                            </div>
-                            <span className="font-bold text-gray-900">{g.label}</span>
-                        </button>
-                    ))}
-                </div>
-            </section>
-
-            {/* Difficulty Level */}
-            <section className="space-y-4">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Experience Level</label>
-                <div className="flex p-1 bg-gray-100 rounded-2xl gap-1">
-                    {['beginner', 'intermediate', 'advanced'].map(l => (
-                        <button
-                            key={l}
-                            onClick={() => setLevel(l)}
-                            className={`flex-1 py-3 rounded-xl text-xs font-bold capitalize transition-all ${level === l ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'
-                                }`}
-                        >
-                            {l}
-                        </button>
-                    ))}
-                </div>
-            </section>
-
-            {/* Schedule Selection */}
-            <section className="space-y-4">
-                <div className="flex justify-between items-center px-1">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Days per Week</label>
-                    <span className="text-lg font-black text-primary">{days} Days</span>
-                </div>
-                <input
-                    type="range"
-                    min="2"
-                    max="7"
-                    step="1"
-                    value={days}
-                    onChange={(e) => setDays(parseInt(e.target.value))}
-                    className="w-full h-2 bg-gray-200 rounded-full appearance-none accent-primary cursor-pointer border-none"
-                />
-                <div className="flex justify-between text-[10px] font-bold text-gray-300 uppercase tracking-tighter">
-                    <span>Weekend Warrior</span>
-                    <span>Professional Athlete</span>
-                </div>
-            </section>
-
-            {/* Blueprint Card */}
-            <Card className="!bg-slate-900 text-white border-none !p-8 relative overflow-hidden min-h-[240px]">
-                <div className="relative z-10 space-y-6">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md">
-                            <Target className="text-emerald-400" size={24} />
-                        </div>
-                        <div>
-                            <h4 className="font-bold text-lg">Your Blueprint</h4>
-                            <p className="text-xs text-white/50">{isGenerating ? 'AI is crafting your routine...' : 'Ready to build'}</p>
-                        </div>
+            {/* Current Phase Info */}
+            <Card className="!bg-slate-900 text-white border-none p-6 relative overflow-hidden">
+                <div className="relative z-10 space-y-2">
+                    <div className="flex items-center gap-2">
+                        <Info size={16} className="text-emerald-400" />
+                        <span className="text-xs font-black uppercase tracking-widest text-emerald-400">Phase Guidelines</span>
                     </div>
-
-                    {isGenerating ? (
-                        <div className="flex flex-col gap-3 py-4 animate-in fade-in duration-500">
-                            <div className="h-4 bg-white/5 rounded-full w-3/4 animate-pulse"></div>
-                            <div className="h-4 bg-white/5 rounded-full w-full animate-pulse"></div>
-                            <div className="h-4 bg-white/5 rounded-full w-2/3 animate-pulse"></div>
-                        </div>
-                    ) : aiResponse ? (
-                        <div className="text-sm text-white/90 whitespace-pre-wrap font-mono leading-relaxed max-h-[300px] overflow-y-auto pr-2 custom-scrollbar animate-in zoom-in-95 duration-500">
-                            {aiResponse}
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            <div className="flex items-center gap-3 text-sm">
-                                <Check size={16} className="text-emerald-400" />
-                                <span className="text-white/80 font-medium capitalize">{goal.replace('_', ' ')} Focus</span>
-                            </div>
-                            <div className="flex items-center gap-3 text-sm">
-                                <Check size={16} className="text-emerald-400" />
-                                <span className="text-white/80 font-medium capitalize">{level} Experience</span>
-                            </div>
-                            <div className="flex items-center gap-3 text-sm">
-                                <Check size={16} className="text-emerald-400" />
-                                <span className="text-white/80 font-medium">{days} Days / Week</span>
-                            </div>
-                        </div>
-                    )}
+                    <p className="text-sm font-medium leading-relaxed opacity-90">
+                        {selectedPhase.description}
+                    </p>
                 </div>
-                <Sparkles className={`absolute -right-8 -top-8 text-primary/20 transition-all duration-1000 ${isGenerating ? 'scale-125 rotate-12' : ''}`} size={160} />
+                <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl"></div>
             </Card>
 
-            <div className="space-y-4 pt-4">
-                <Button
-                    variant="primary"
-                    fullWidth
-                    disabled={isGenerating}
-                    className="py-5 rounded-3xl text-lg font-black italic uppercase tracking-widest shadow-2xl shadow-primary/20 flex items-center justify-center gap-3"
-                    onClick={generatePlan}
-                >
-                    {isGenerating ? 'Generating...' : 'Generate My Plan'} <Sparkles className={`${isGenerating ? 'animate-spin' : ''}`} size={20} />
-                </Button>
-                <p className="text-center text-[10px] font-bold text-gray-400 flex items-center justify-center gap-2">
-                    <Info size={14} /> Powered by Perplexity AI
-                </p>
+            {/* Weekly Schedule */}
+            <div className="space-y-3">
+                {selectedPhase.schedule.map((day) => (
+                    <Card key={day.day} className={`transition-all duration-300 overflow-hidden ${expandedDay === day.day ? 'ring-2 ring-primary/20' : ''}`}>
+                        <div
+                            className="p-4 flex items-center justify-between cursor-pointer active:bg-gray-50"
+                            onClick={() => setExpandedDay(expandedDay === day.day ? null : day.day)}
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg italic ${day.title.includes('Rest') ? 'bg-emerald-50 text-emerald-500' : 'bg-primary/10 text-primary'
+                                    }`}>
+                                    {day.day}
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-gray-900">{day.title}</h4>
+                                    <p className="text-xs text-gray-500 font-medium">{day.focus}</p>
+                                </div>
+                            </div>
+                            <ChevronRight
+                                size={20}
+                                className={`text-gray-300 transition-transform duration-300 ${expandedDay === day.day ? 'rotate-90' : ''}`}
+                            />
+                        </div>
+
+                        {/* Expanded Details */}
+                        {expandedDay === day.day && !day.title.includes('Rest') && (
+                            <div className="bg-gray-50 border-t border-gray-100 p-4 space-y-4 animate-in slide-in-from-top-2">
+                                <div className="space-y-2">
+                                    {day.exercises.map((ex, idx) => (
+                                        <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-1.5 bg-gray-100 rounded-lg text-gray-400">
+                                                    <Dumbbell size={14} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-black text-gray-800 uppercase">{ex.name}</p>
+                                                    <p className="text-[10px] text-gray-400 font-bold">{ex.sets} sets × {ex.reps}</p>
+                                                </div>
+                                            </div>
+                                            {ex.notes && <Info size={14} className="text-gray-300" />}
+                                        </div>
+                                    ))}
+                                    {day.abs && day.abs.length > 0 && (
+                                        <div className="mt-2 pt-2 border-t border-gray-200">
+                                            <p className="text-[10px] font-black uppercase text-gray-400 mb-2 pl-1">Core Finisher</p>
+                                            {day.abs.map((ex, idx) => (
+                                                <div key={'abs' + idx} className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100">
+                                                    <p className="text-xs font-black text-gray-800 uppercase">{ex.name}</p>
+                                                    <p className="text-[10px] text-gray-400 font-bold">{ex.sets} × {ex.reps}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {day.hiit && (
+                                        <div className="p-3 bg-orange-50 rounded-xl border border-orange-100 text-orange-600">
+                                            <p className="text-[10px] font-black uppercase tracking-widest mb-1">HIIT Session</p>
+                                            <p className="text-xs font-bold">{day.hiit}</p>
+                                        </div>
+                                    )}
+                                </div>
+                                <Button
+                                    fullWidth
+                                    variant="primary"
+                                    className="rounded-xl shadow-lg shadow-primary/20"
+                                    onClick={() => navigate(`/fitness/session/${selectedPhase.id}-${day.day}`)}
+                                >
+                                    <Play size={18} className="mr-2" /> Start Workout
+                                </Button>
+                            </div>
+                        )}
+
+                        {/* Rest Day Message */}
+                        {expandedDay === day.day && day.title.includes('Rest') && (
+                            <div className="bg-emerald-50 border-t border-emerald-100 p-6 text-center">
+                                <CheckCircle2 size={32} className="text-emerald-500 mx-auto mb-2" />
+                                <h4 className="font-bold text-emerald-800">Rest & Recover</h4>
+                                <p className="text-xs text-emerald-600 mt-1 max-w-[200px] mx-auto">
+                                    Sleep, stretch, and eat well today. Your muscles grow while you rest.
+                                </p>
+                            </div>
+                        )}
+                    </Card>
+                ))}
             </div>
         </div>
     );
